@@ -1,0 +1,79 @@
+;; aws-vpc-network.tlisp — direct port of
+;; pangea-architectures/lib/pangea/architectures/aws_vpc_network.rb
+;;
+;; Creates:
+;;   VPC with DNS support
+;;   Internet Gateway
+;;   Public subnets (one per AZ)
+;;   Private subnets (one per AZ)
+;;   Elastic IP for NAT
+;;   NAT Gateway in first public subnet
+;;   Default security group
+;;
+;; Authored fully in tatara-lisp; synthesized down to magma-compatible
+;; terraform.json by lava-eval (consumed by magma in-memory at plan/
+;; apply time — no intermediate file dump).
+
+(deflava-architecture aws-vpc-network
+  :inputs ((:name "main")
+           (:cidr "10.0.0.0/16")
+           (:availability-zones ("us-east-1a" "us-east-1b" "us-east-1c"))
+           (:environment "production"))
+
+  :resources (
+    ;; VPC
+    (aws-vpc "{name}-vpc"
+      :cidr-block "{cidr}"
+      :enable-dns-support #t
+      :enable-dns-hostnames #t
+      :tags ((Name "{name}-vpc") (Environment "{environment}")))
+
+    ;; Internet Gateway
+    (aws-internet-gateway "{name}-igw"
+      :vpc-id (ref aws-vpc "{name}-vpc" id)
+      :tags ((Name "{name}-igw")))
+
+    ;; Public subnets — one per availability zone.
+    (for-each ((i az) (enumerate availability-zones))
+      (aws-subnet "{name}-public-{i}"
+        :vpc-id (ref aws-vpc "{name}-vpc" id)
+        :cidr-block "10.0.{i}.0/24"
+        :availability-zone "{az}"
+        :map-public-ip-on-launch #t
+        :tags ((Name "{name}-public-{az}") (Tier "public"))))
+
+    ;; Private subnets — one per availability zone (CIDR shift 10).
+    (for-each ((i az) (enumerate availability-zones))
+      (aws-subnet "{name}-private-{i}"
+        :vpc-id (ref aws-vpc "{name}-vpc" id)
+        :cidr-block "10.0.{i+10}.0/24"
+        :availability-zone "{az}"
+        :tags ((Name "{name}-private-{az}") (Tier "private"))))
+
+    ;; Elastic IP for NAT
+    (aws-eip "{name}-nat-eip"
+      :domain "vpc"
+      :tags ((Name "{name}-nat-eip")))
+
+    ;; NAT Gateway in first public subnet
+    (aws-nat-gateway "{name}-nat"
+      :allocation-id (ref aws-eip "{name}-nat-eip" allocation_id)
+      :subnet-id     (ref aws-subnet "{name}-public-0" id)
+      :tags ((Name "{name}-nat")))
+
+    ;; Default security group
+    (aws-security-group "{name}-default-sg"
+      :name-prefix "{name}-default-"
+      :vpc-id (ref aws-vpc "{name}-vpc" id)
+      :description "Default security group for {name} VPC"
+      :tags ((Name "{name}-default-sg"))))
+
+  :result (network
+    :vpc-id (ref aws-vpc "{name}-vpc" id)
+    :vpc-cidr "{cidr}"
+    :public-subnet-ids (for-each ((i az) (enumerate availability-zones))
+                         (ref aws-subnet "{name}-public-{i}" id))
+    :private-subnet-ids (for-each ((i az) (enumerate availability-zones))
+                          (ref aws-subnet "{name}-private-{i}" id))
+    :internet-gateway-id (ref aws-internet-gateway "{name}-igw" id)
+    :nat-gateway-ids ((ref aws-nat-gateway "{name}-nat" id))))
