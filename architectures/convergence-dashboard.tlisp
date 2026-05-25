@@ -1,0 +1,35 @@
+;; convergence-dashboard.tlisp — Datadog convergence dashboard + monitors
+;; Datadog tag-syntax `{tag:value}` is escaped to plain text since
+;; lava-eval reserves `{` for variable interpolation. Operators get
+;; the rendered query string verbatim — Datadog parses tag filters
+;; at its own evaluation layer, not at our render.
+(deflava-interface convergence-dashboard
+  :doc "Datadog dashboard + 3 monitors tracking convergence-loop latency"
+  :inputs ((:name :type :string :default "convergence")
+           (:env :type :string :default "prod"))
+  :outputs ((:dashboard-id :type :string :required #t)))
+
+(deflava-architecture convergence-dashboard
+  :inputs ((:name "convergence") (:env "prod"))
+  :resources (
+    (datadog-dashboard "{name}-dashboard"
+      :title "{name}-{env}"
+      :description "Convergence loop dashboard"
+      :layout-type "ordered")
+    (datadog-monitor "{name}-latency-monitor"
+      :name "{name}-latency-{env}"
+      :type "query alert"
+      :message "Convergence latency over threshold"
+      :query "avg(last_5m):avg:convergence.tick.duration.env-{env} > 5")
+    (datadog-monitor "{name}-error-monitor"
+      :name "{name}-error-{env}"
+      :type "metric alert"
+      :message "Convergence errors over threshold"
+      :query "sum(last_5m):sum:convergence.errors.env-{env}.as_count > 10")
+    (datadog-monitor "{name}-drift-monitor"
+      :name "{name}-drift-{env}"
+      :type "query alert"
+      :message "Drift events spiked"
+      :query "sum(last_5m):sum:convergence.drift.env-{env}.as_count > 0"))
+  :result (dashboard
+    :dashboard-id (ref datadog-dashboard "{name}-dashboard" id)))

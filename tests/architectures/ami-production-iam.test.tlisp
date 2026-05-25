@@ -1,0 +1,8 @@
+
+(deflava-test ami-production-iam/default
+  :architecture ami-production-iam
+  :assertions ((resource-exists aws-iam-role "packer-prod-role")
+               (resource-exists aws-iam-role-policy-attachment "packer-prod-attach-managed")
+               (resource-exists aws-iam-instance-profile "packer-prod-instance-profile")
+               (ref-valid)))
+

@@ -1,0 +1,30 @@
+
+;; akeyless-aws-integration.tlisp — Akeyless ↔ AWS via dedicated IAM
+(deflava-interface akeyless-aws-integration
+  :doc "Akeyless dynamic-secret target for AWS via IAM role + policy"
+  :inputs ((:name :type :string :default "prod")
+           (:access-key-id :type :string :required #t)
+           (:secret-access-key :type :string :required #t))
+  :outputs ((:target-name :type :string :required #t)
+            (:role-arn :type :string :required #t)))
+
+(deflava-architecture akeyless-aws-integration
+  :inputs ((:name "prod")
+           (:access-key-id "AKIAxxxxxxxxxxxxxxxx")
+           (:secret-access-key "placeholder-secret"))
+  :resources (
+    (akeyless-target-aws "{name}-aws-target"
+      :name "/{name}/targets/aws"
+      :access-key-id "{access-key-id}"
+      :secret-access-key "{secret-access-key}")
+    (akeyless-dynamic-secret-aws "{name}-dynamic-secret"
+      :name "/{name}/dynamic/aws"
+      :target-name (ref akeyless-target-aws "{name}-aws-target" name))
+    (aws-iam-role "{name}-akeyless-bridge"
+      :name "{name}-akeyless-bridge"
+      :assume-role-policy "placeholder-trust"
+      :tags ((Service "akeyless"))))
+  :result (akeyless-aws
+    :target-name (ref akeyless-target-aws "{name}-aws-target" name)
+    :role-arn (ref aws-iam-role "{name}-akeyless-bridge" arn)))
+

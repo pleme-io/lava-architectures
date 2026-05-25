@@ -1,0 +1,7 @@
+
+(deflava-test convergence-dashboard/default
+  :architecture convergence-dashboard
+  :assertions ((resource-exists datadog-dashboard "convergence-dashboard")
+               (resource-count datadog-monitor 3)
+               (ref-valid)))
+

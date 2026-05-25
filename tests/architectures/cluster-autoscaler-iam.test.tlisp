@@ -1,0 +1,8 @@
+
+(deflava-test cluster-autoscaler-iam/default
+  :architecture cluster-autoscaler-iam
+  :bindings (:cluster-name "smoke")
+  :assertions ((resource-exists aws-iam-role "cluster-autoscaler-role")
+               (resource-exists aws-iam-role-policy "cluster-autoscaler-inline")
+               (ref-valid)))
+

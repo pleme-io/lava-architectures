@@ -1,0 +1,12 @@
+
+(deflava-test cloudflare-headless-blog/default
+  :architecture cloudflare-headless-blog
+  :bindings (:account-id "00000000000000000000000000000000"
+             :bucket-name "smoke-blog"
+             :zone-id "ffffffffffffffffffffffffffffffff"
+             :hostname "smoke.example.com")
+  :assertions ((resource-exists cloudflare-r2-bucket "smoke-blog")
+               (resource-exists cloudflare-workers-script "blog-worker")
+               (resource-exists cloudflare-workers-domain "blog-worker-domain")
+               (ref-valid)))
+

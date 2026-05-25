@@ -1,0 +1,9 @@
+
+(deflava-test dns-record-set/default
+  :architecture dns-record-set
+  :bindings (:zone-id "Z0000000000000000000" :name "smoke" :domain "smoke.example.com")
+  :assertions ((resource-exists aws-route53-record "smoke-apex")
+               (resource-exists aws-route53-record "smoke-www")
+               (resource-count aws-route53-record 2)
+               (ref-valid)))
+

@@ -1,0 +1,35 @@
+
+;; dns-record-set.tlisp — generic Route53 record bundle
+(deflava-interface dns-record-set
+  :doc "Route53 record bundle on a single hosted zone"
+  :inputs ((:zone-id :type :string :required #t)
+           (:name :type :string :required #t)
+           (:domain :type :hostname :required #t)
+           (:apex-target :type :hostname :default "1.2.3.4")
+           (:www-target :type :hostname :default "1.2.3.4"))
+  :outputs ((:apex-id :type :string)
+            (:www-id  :type :string)))
+
+(deflava-architecture dns-record-set
+  :inputs ((:zone-id "Z0000000000000000000")
+           (:name "main")
+           (:domain "example.com")
+           (:apex-target "1.2.3.4")
+           (:www-target "1.2.3.4"))
+  :resources (
+    (aws-route53-record "{name}-apex"
+      :zone-id "{zone-id}"
+      :name "{domain}"
+      :type "A"
+      :ttl 300
+      :records ("{apex-target}"))
+    (aws-route53-record "{name}-www"
+      :zone-id "{zone-id}"
+      :name "www.{domain}"
+      :type "A"
+      :ttl 300
+      :records ("{www-target}")))
+  :result (dns-set
+    :apex-id (ref aws-route53-record "{name}-apex" id)
+    :www-id  (ref aws-route53-record "{name}-www" id)))
+

@@ -129,6 +129,65 @@ fn minimal_bindings(
                 bag.insert(k.to_string(), v.to_string());
             }
         }
+        "dns-record-set" => {
+            for (k, v) in [
+                ("zone-id", "Z0000000000000000000"),
+                ("name", "matrix"),
+                ("domain", "matrix.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "cilium-irsa" => {
+            for (k, v) in [
+                ("cluster-name", "matrix"),
+                ("oidc-provider-arn", "arn:aws:iam::000:oidc-provider/x"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "cluster-autoscaler-iam" => {
+            for (k, v) in [("cluster-name", "matrix")] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "cloudflare-tunnel-ingress" => {
+            for (k, v) in [
+                ("account-id", "00000000000000000000000000000000"),
+                ("tunnel-name", "matrix"),
+                ("tunnel-secret", "x"),
+                ("zone-id", "11111111111111111111111111111111"),
+                ("domain", "matrix.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "cloudflare-headless-blog" => {
+            for (k, v) in [
+                ("account-id", "00000000000000000000000000000000"),
+                ("bucket-name", "matrix-blog"),
+                ("zone-id", "11111111111111111111111111111111"),
+                ("hostname", "matrix.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "akeyless-aws-integration" => {
+            for (k, v) in [
+                ("access-key-id", "AKIAxxxxxxxxxxxxxxxx"),
+                ("secret-access-key", "placeholder-secret"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        // backup-recovery, ami-production-iam, convergence-dashboard,
+        // drill-network — defaults cover everything.
         _ => {}
     }
     (b, bag)

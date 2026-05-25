@@ -1,0 +1,9 @@
+
+(deflava-test backup-recovery/default
+  :architecture backup-recovery
+  :assertions ((resource-exists aws-backup-vault "prod-vault")
+               (resource-exists aws-backup-plan "prod-plan")
+               (resource-exists aws-backup-selection "prod-selection")
+               (resource-count aws-backup-vault 1)
+               (ref-valid)))
+

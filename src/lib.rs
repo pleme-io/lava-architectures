@@ -56,6 +56,16 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("cloudflare-zone", 2),        // zone + settings-override
     ("aws-eks-cluster", 4),        // cluster role + node role + cluster + node-group
     ("split-horizon-dns", 4),      // 2 zones + 2 apex records
+    ("dns-record-set", 2),         // apex + www records
+    ("cilium-irsa", 3),            // role + policy + attachment
+    ("cluster-autoscaler-iam", 2), // role + inline policy
+    ("backup-recovery", 3),        // vault + plan + selection
+    ("ami-production-iam", 3),     // role + policy attachment + instance profile
+    ("cloudflare-tunnel-ingress", 3), // tunnel + 2 cnames
+    ("cloudflare-headless-blog", 3),  // bucket + worker + workers-domain
+    ("akeyless-aws-integration", 3),  // aws-target + dynamic-secret + bridge role
+    ("convergence-dashboard", 4),     // dashboard + 3 monitors
+    ("drill-network", 3),             // vpc + subnet + sg
 ];
 
 /// Derived view of the typed interface registered alongside each

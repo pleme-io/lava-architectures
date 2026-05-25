@@ -1,0 +1,9 @@
+
+(deflava-test akeyless-aws-integration/default
+  :architecture akeyless-aws-integration
+  :bindings (:access-key-id "AKIAxxxxxxxxxxxxxxxx" :secret-access-key "x")
+  :assertions ((resource-exists akeyless-target-aws "prod-aws-target")
+               (resource-exists akeyless-dynamic-secret-aws "prod-dynamic-secret")
+               (resource-exists aws-iam-role "prod-akeyless-bridge")
+               (ref-valid)))
+

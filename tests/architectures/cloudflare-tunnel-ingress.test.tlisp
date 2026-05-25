@@ -1,0 +1,14 @@
+
+(deflava-test cloudflare-tunnel-ingress/default
+  :architecture cloudflare-tunnel-ingress
+  :bindings (:account-id "00000000000000000000000000000000"
+             :tunnel-name "smoke"
+             :tunnel-secret "x"
+             :zone-id "ffffffffffffffffffffffffffffffff"
+             :domain "smoke.example.com")
+  :assertions ((resource-exists cloudflare-tunnel "smoke")
+               (resource-exists cloudflare-dns-record "smoke-app-cname")
+               (resource-exists cloudflare-dns-record "smoke-api-cname")
+               (resource-count cloudflare-dns-record 2)
+               (ref-valid)))
+

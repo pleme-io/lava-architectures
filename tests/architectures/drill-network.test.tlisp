@@ -1,0 +1,9 @@
+
+(deflava-test drill-network/default
+  :architecture drill-network
+  :assertions ((resource-exists aws-vpc "drill-vpc")
+               (resource-exists aws-subnet "drill-subnet")
+               (resource-exists aws-security-group "drill-sg")
+               (attribute-equals aws-vpc "drill-vpc" :cidr-block "10.99.0.0/16")
+               (ref-valid)))
+

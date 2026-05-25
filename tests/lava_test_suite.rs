@@ -149,6 +149,33 @@ fn apply_required_bindings(
             ("domain", "smoke.example.com"),
             ("vpc-id", "vpc-1234"),
         ],
+        "dns-record-set" => &[
+            ("zone-id", "Z0000000000000000000"),
+            ("name", "smoke"),
+            ("domain", "smoke.example.com"),
+        ],
+        "cilium-irsa" => &[
+            ("cluster-name", "smoke"),
+            ("oidc-provider-arn", "arn:aws:iam::000:oidc-provider/x"),
+        ],
+        "cluster-autoscaler-iam" => &[("cluster-name", "smoke")],
+        "cloudflare-tunnel-ingress" => &[
+            ("account-id", "00000000000000000000000000000000"),
+            ("tunnel-name", "smoke"),
+            ("tunnel-secret", "x"),
+            ("zone-id", "ffffffffffffffffffffffffffffffff"),
+            ("domain", "smoke.example.com"),
+        ],
+        "cloudflare-headless-blog" => &[
+            ("account-id", "00000000000000000000000000000000"),
+            ("bucket-name", "smoke-blog"),
+            ("zone-id", "ffffffffffffffffffffffffffffffff"),
+            ("hostname", "smoke.example.com"),
+        ],
+        "akeyless-aws-integration" => &[
+            ("access-key-id", "AKIAxxxxxxxxxxxxxxxx"),
+            ("secret-access-key", "x"),
+        ],
         _ => &[],
     };
     for (k, v) in pairs {
