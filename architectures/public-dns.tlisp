@@ -1,0 +1,60 @@
+;; public-dns.tlisp — port of
+;; pangea-architectures/lib/pangea/architectures/public_dns.rb
+;;
+;; Route53 public hosted zone + DNSSEC (KMS key + KSK + zone-DNSSEC
+;; toggle) + CloudWatch query log group. Production profile: all
+;; security-enhancing features enabled.
+
+(deflava-interface public-dns
+  :doc "Route53 public hosted zone + DNSSEC + query logging"
+  :inputs ((:name   :type :string   :required #t)
+           (:domain :type :hostname :required #t)
+           (:retention-days :type :string :default "7"))
+  :outputs ((:zone-id    :type :string :required #t)
+            (:zone-name  :type :string :required #t)
+            (:dnssec-arn :type :string)
+            (:log-group  :type :string)))
+
+(deflava-architecture public-dns
+  :inputs ((:name           "main")
+           (:domain         "example.com")
+           (:retention-days "7"))
+
+  :resources (
+    ;; Hosted zone.
+    (aws-route53-zone "{name}-zone"
+      :name "{domain}"
+      :tags ((Name "{name}-zone") (TrustBoundary "zero-trust")))
+
+    ;; KMS key for DNSSEC signing.
+    (aws-kms-key "{name}-dnssec-key"
+      :customer-master-key-spec "ECC_NIST_P256"
+      :key-usage "SIGN_VERIFY"
+      :tags ((Name "{name}-dnssec-key") (TrustBoundary "zero-trust")))
+
+    ;; Key-signing key (binds KMS key to the zone).
+    (aws-route53-key-signing-key "{name}-ksk"
+      :hosted-zone-id (ref aws-route53-zone "{name}-zone" id)
+      :key-management-service-arn (ref aws-kms-key "{name}-dnssec-key" arn)
+      :name "{name}-ksk")
+
+    ;; DNSSEC enablement on the zone.
+    (aws-route53-hosted-zone-dnssec "{name}-dnssec"
+      :hosted-zone-id (ref aws-route53-zone "{name}-zone" id))
+
+    ;; CloudWatch query log group.
+    (aws-cloudwatch-log-group "{name}-dns-query-log"
+      :name "/dns/{name}/query-log"
+      :retention-in-days "{retention-days}"
+      :tags ((Name "{name}-dns-query-log") (TrustBoundary "zero-trust")))
+
+    ;; Query log binding.
+    (aws-route53-query-log "{name}-query-log"
+      :zone-id (ref aws-route53-zone "{name}-zone" id)
+      :cloudwatch-log-group-arn (ref aws-cloudwatch-log-group "{name}-dns-query-log" arn)))
+
+  :result (public-dns
+    :zone-id    (ref aws-route53-zone "{name}-zone" id)
+    :zone-name  "{domain}"
+    :dnssec-arn (ref aws-kms-key "{name}-dnssec-key" arn)
+    :log-group  (ref aws-cloudwatch-log-group "{name}-dns-query-log" arn)))

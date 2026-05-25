@@ -64,6 +64,32 @@ fn minimal_bindings(
             b.set_str("name-prefix", "matrix-test");
             bag.insert("name-prefix".to_string(), "matrix-test".to_string());
         }
+        "cloudflare-r2-bucket" => {
+            for (k, v) in [
+                ("account-id", "abcd1234abcd1234abcd1234abcd1234"),
+                ("bucket-name", "matrix-bucket"),
+                ("zone-id", "ffff1234ffff1234ffff1234ffff1234"),
+                ("domain", "cdn.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "public-dns" => {
+            for (k, v) in [("name", "matrix"), ("domain", "matrix.example.com")] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "akeyless-platform" => {
+            for (k, v) in [
+                ("zone-id", "ffff1234ffff1234ffff1234ffff1234"),
+                ("domain", "akeyless.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
         _ => {}
     }
     (b, bag)
