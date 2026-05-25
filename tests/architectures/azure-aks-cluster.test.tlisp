@@ -1,0 +1,7 @@
+
+(deflava-test azure-aks-cluster/default
+  :architecture azure-aks-cluster
+  :bindings (:resource-group "smoke-rg")
+  :assertions ((resource-exists azurerm-kubernetes-cluster "demo-aks")
+               (ref-valid)))
+

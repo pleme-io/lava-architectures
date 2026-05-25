@@ -1,0 +1,15 @@
+
+(deflava-interface akeyless-dev-packer
+  :doc "Akeyless dev IAM + S3 for Packer builds"
+  :inputs ((:name :type :string :default "akeyless-dev-packer")))
+
+(deflava-architecture akeyless-dev-packer
+  :inputs ((:name "akeyless-dev-packer"))
+  :resources (
+    (aws-iam-role "{name}-role"
+      :name "{name}-role"
+      :assume-role-policy "placeholder-trust")
+    (aws-s3-bucket "{name}-amis"
+      :bucket "{name}-amis"
+      :tags ((Service "akeyless") (Env "dev")))))
+

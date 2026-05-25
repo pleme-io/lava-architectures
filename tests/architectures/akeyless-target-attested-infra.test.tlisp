@@ -1,0 +1,7 @@
+
+(deflava-test akeyless-target-attested-infra/default
+  :architecture akeyless-target-attested-infra
+  :assertions ((resource-exists akeyless-target-k8s "attested-attested-target")
+               (resource-exists akeyless-role "attested-attested-role")
+               (ref-valid)))
+

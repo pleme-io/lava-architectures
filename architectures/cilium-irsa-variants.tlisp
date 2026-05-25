@@ -1,0 +1,20 @@
+
+(deflava-interface cilium-irsa-variants
+  :doc "Cilium IRSA — agent + operator + envoy proxy variants"
+  :inputs ((:cluster-name :type :string :required #t)
+           (:oidc-provider-arn :type :string :required #t)))
+
+(deflava-architecture cilium-irsa-variants
+  :inputs ((:cluster-name "demo")
+           (:oidc-provider-arn "arn:aws:iam::000:oidc-provider/x"))
+  :resources (
+    (aws-iam-role "cilium-agent-role"
+      :name "cilium-agent-{cluster-name}"
+      :assume-role-policy "placeholder-oidc-trust")
+    (aws-iam-role "cilium-operator-role"
+      :name "cilium-operator-{cluster-name}"
+      :assume-role-policy "placeholder-oidc-trust")
+    (aws-iam-role "cilium-envoy-role"
+      :name "cilium-envoy-{cluster-name}"
+      :assume-role-policy "placeholder-oidc-trust")))
+

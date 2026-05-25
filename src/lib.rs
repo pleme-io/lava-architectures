@@ -66,6 +66,21 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("akeyless-aws-integration", 3),  // aws-target + dynamic-secret + bridge role
     ("convergence-dashboard", 4),     // dashboard + 3 monitors
     ("drill-network", 3),             // vpc + subnet + sg
+    ("cloudflare-zero-trust-access", 2), // app + policy
+    ("akeyless-dev-cluster", 2),         // eks + node-role
+    ("ami-test-iam", 2),                 // role + ssm attach
+    ("drill-iam-role", 2),               // role + inline policy
+    ("continuous-monitoring", 3),        // log-group + alarm + sns
+    ("akeyless-target-attested-infra", 2), // target + role
+    ("cloudflare-domain", 2),            // zone + root
+    ("cloudflare-dns-security", 3),      // dmarc + spf + dkim
+    ("akeyless-dev-packer", 2),          // role + bucket
+    ("akeyless-dev-workspace", 2),       // vpc + subnet
+    ("azure-aks-cluster", 1),            // aks
+    ("burst-forge-dashboard", 2),        // dashboard + monitor
+    ("dns-record-set-typed", 4),         // apex + www + mx + verify
+    ("backup-recovery-multi-region", 3), // primary + secondary + plan
+    ("cilium-irsa-variants", 3),         // 3 IRSA roles
 ];
 
 /// Derived view of the typed interface registered alongside each

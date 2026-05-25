@@ -1,0 +1,7 @@
+
+(deflava-test akeyless-dev-packer/default
+  :architecture akeyless-dev-packer
+  :assertions ((resource-exists aws-iam-role "akeyless-dev-packer-role")
+               (resource-exists aws-s3-bucket "akeyless-dev-packer-amis")
+               (ref-valid)))
+

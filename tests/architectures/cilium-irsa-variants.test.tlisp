@@ -1,0 +1,10 @@
+
+(deflava-test cilium-irsa-variants/default
+  :architecture cilium-irsa-variants
+  :bindings (:cluster-name "smoke" :oidc-provider-arn "arn:aws:iam::000:oidc-provider/x")
+  :assertions ((resource-exists aws-iam-role "cilium-agent-role")
+               (resource-exists aws-iam-role "cilium-operator-role")
+               (resource-exists aws-iam-role "cilium-envoy-role")
+               (resource-count aws-iam-role 3)
+               (ref-valid)))
+

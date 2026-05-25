@@ -1,0 +1,7 @@
+
+(deflava-test akeyless-dev-cluster/default
+  :architecture akeyless-dev-cluster
+  :assertions ((resource-exists aws-eks-cluster "akeyless-dev-cluster")
+               (resource-exists aws-iam-role "akeyless-dev-node-role")
+               (ref-valid)))
+

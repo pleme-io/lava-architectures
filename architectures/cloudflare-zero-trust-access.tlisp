@@ -1,0 +1,28 @@
+
+(deflava-interface cloudflare-zero-trust-access
+  :doc "Cloudflare Zero-Trust access app + policy"
+  :inputs ((:account-id :type :string :required #t)
+           (:zone-id :type :string :required #t)
+           (:app-domain :type :hostname :required #t)
+           (:app-name :type :string :default "app"))
+  :outputs ((:app-id :type :string :required #t)))
+
+(deflava-architecture cloudflare-zero-trust-access
+  :inputs ((:account-id "00000000000000000000000000000000")
+           (:zone-id "11111111111111111111111111111111")
+           (:app-domain "app.example.com")
+           (:app-name "app"))
+  :resources (
+    (cloudflare-access-application "{app-name}-app"
+      :account-id "{account-id}"
+      :zone-id "{zone-id}"
+      :name "{app-name}"
+      :domain "{app-domain}")
+    (cloudflare-access-policy "{app-name}-policy"
+      :application-id (ref cloudflare-access-application "{app-name}-app" id)
+      :account-id "{account-id}"
+      :name "{app-name}-policy"
+      :precedence 1
+      :decision "allow"))
+  :result (zero-trust :app-id (ref cloudflare-access-application "{app-name}-app" id)))
+

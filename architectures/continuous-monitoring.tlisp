@@ -1,0 +1,24 @@
+
+(deflava-interface continuous-monitoring
+  :doc "Continuous monitoring: CloudWatch alarms + log groups"
+  :inputs ((:name :type :string :default "fleet")
+           (:retention-days :type :string :default "30")))
+
+(deflava-architecture continuous-monitoring
+  :inputs ((:name "fleet") (:retention-days "30"))
+  :resources (
+    (aws-cloudwatch-log-group "{name}-log-group"
+      :name "/fleet/{name}/logs"
+      :retention-in-days "{retention-days}")
+    (aws-cloudwatch-metric-alarm "{name}-error-alarm"
+      :alarm-name "{name}-error-rate"
+      :comparison-operator "GreaterThanThreshold"
+      :evaluation-periods 2
+      :metric-name "Errors"
+      :namespace "AWS/Lambda"
+      :period 60
+      :statistic "Sum"
+      :threshold 5)
+    (aws-sns-topic "{name}-alerts"
+      :name "{name}-alerts")))
+

@@ -1,0 +1,10 @@
+
+(deflava-test cloudflare-dns-security/default
+  :architecture cloudflare-dns-security
+  :bindings (:zone-id "11111111111111111111111111111111" :domain "smoke.example.com")
+  :assertions ((resource-exists cloudflare-dns-record "dmarc-smoke.example.com")
+               (resource-exists cloudflare-dns-record "spf-smoke.example.com")
+               (resource-exists cloudflare-dns-record "dkim-smoke.example.com")
+               (resource-count cloudflare-dns-record 3)
+               (ref-valid)))
+

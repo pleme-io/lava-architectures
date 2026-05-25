@@ -1,0 +1,31 @@
+
+(deflava-interface cloudflare-dns-security
+  :doc "Cloudflare DNSSEC + DMARC + SPF + DKIM hardening bundle"
+  :inputs ((:zone-id :type :string :required #t)
+           (:domain :type :hostname :required #t)
+           (:dmarc-policy :type :string :default "reject")))
+
+(deflava-architecture cloudflare-dns-security
+  :inputs ((:zone-id "11111111111111111111111111111111")
+           (:domain "example.com")
+           (:dmarc-policy "reject"))
+  :resources (
+    (cloudflare-dns-record "dmarc-{domain}"
+      :zone-id "{zone-id}"
+      :name "_dmarc.{domain}"
+      :type "TXT"
+      :content "v=DMARC1; p={dmarc-policy}"
+      :ttl 1)
+    (cloudflare-dns-record "spf-{domain}"
+      :zone-id "{zone-id}"
+      :name "{domain}"
+      :type "TXT"
+      :content "v=spf1 -all"
+      :ttl 1)
+    (cloudflare-dns-record "dkim-{domain}"
+      :zone-id "{zone-id}"
+      :name "default._domainkey.{domain}"
+      :type "TXT"
+      :content "v=DKIM1; k=rsa; p=placeholder"
+      :ttl 1)))
+

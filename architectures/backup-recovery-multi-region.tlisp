@@ -1,0 +1,18 @@
+
+(deflava-interface backup-recovery-multi-region
+  :doc "AWS Backup vault + plan + cross-region replication"
+  :inputs ((:name :type :string :default "prod")
+           (:secondary-region :type :string :default "us-west-2")))
+
+(deflava-architecture backup-recovery-multi-region
+  :inputs ((:name "prod") (:secondary-region "us-west-2"))
+  :resources (
+    (aws-backup-vault "{name}-primary"
+      :name "{name}-primary"
+      :tags ((Region "primary")))
+    (aws-backup-vault "{name}-secondary"
+      :name "{name}-secondary-{secondary-region}"
+      :tags ((Region "{secondary-region}")))
+    (aws-backup-plan "{name}-plan"
+      :name "{name}-cross-region-plan")))
+

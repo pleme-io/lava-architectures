@@ -188,6 +188,59 @@ fn minimal_bindings(
         }
         // backup-recovery, ami-production-iam, convergence-dashboard,
         // drill-network — defaults cover everything.
+        "cloudflare-zero-trust-access" => {
+            for (k, v) in [
+                ("account-id", "00000000000000000000000000000000"),
+                ("zone-id", "11111111111111111111111111111111"),
+                ("app-domain", "matrix.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "cloudflare-domain" => {
+            for (k, v) in [
+                ("account-id", "00000000000000000000000000000000"),
+                ("domain", "matrix.example.com"),
+                ("zone-id", "11111111111111111111111111111111"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "cloudflare-dns-security" => {
+            for (k, v) in [
+                ("zone-id", "11111111111111111111111111111111"),
+                ("domain", "matrix.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "azure-aks-cluster" => {
+            for (k, v) in [("resource-group", "matrix-rg")] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "cilium-irsa-variants" => {
+            for (k, v) in [
+                ("cluster-name", "matrix"),
+                ("oidc-provider-arn", "arn:aws:iam::000:oidc-provider/x"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "dns-record-set-typed" => {
+            for (k, v) in [
+                ("zone-id", "Z0000000000000000000"),
+                ("domain", "matrix.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
         _ => {}
     }
     (b, bag)

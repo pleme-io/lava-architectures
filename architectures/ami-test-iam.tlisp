@@ -1,0 +1,18 @@
+
+(deflava-interface ami-test-iam
+  :doc "IAM for Packer test AMI bake (vs production)"
+  :inputs ((:name :type :string :default "packer-test"))
+  :outputs ((:role-arn :type :string :required #t)))
+
+(deflava-architecture ami-test-iam
+  :inputs ((:name "packer-test"))
+  :resources (
+    (aws-iam-role "{name}-role"
+      :name "{name}-role"
+      :assume-role-policy "placeholder-trust"
+      :tags ((Env "test")))
+    (aws-iam-role-policy-attachment "{name}-attach-ssm"
+      :role (ref aws-iam-role "{name}-role" name)
+      :policy-arn "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"))
+  :result (test-iam :role-arn (ref aws-iam-role "{name}-role" arn)))
+

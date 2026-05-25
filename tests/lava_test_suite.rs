@@ -176,6 +176,29 @@ fn apply_required_bindings(
             ("access-key-id", "AKIAxxxxxxxxxxxxxxxx"),
             ("secret-access-key", "x"),
         ],
+        "cloudflare-zero-trust-access" => &[
+            ("account-id", "00000000000000000000000000000000"),
+            ("zone-id", "11111111111111111111111111111111"),
+            ("app-domain", "smoke.example.com"),
+        ],
+        "cloudflare-domain" => &[
+            ("account-id", "00000000000000000000000000000000"),
+            ("domain", "smoke.example.com"),
+            ("zone-id", "11111111111111111111111111111111"),
+        ],
+        "cloudflare-dns-security" => &[
+            ("zone-id", "11111111111111111111111111111111"),
+            ("domain", "smoke.example.com"),
+        ],
+        "azure-aks-cluster" => &[("resource-group", "smoke-rg")],
+        "cilium-irsa-variants" => &[
+            ("cluster-name", "smoke"),
+            ("oidc-provider-arn", "arn:aws:iam::000:oidc-provider/x"),
+        ],
+        "dns-record-set-typed" => &[
+            ("zone-id", "Z0000000000000000000"),
+            ("domain", "smoke.example.com"),
+        ],
         _ => &[],
     };
     for (k, v) in pairs {

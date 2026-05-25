@@ -1,0 +1,7 @@
+
+(deflava-test akeyless-dev-workspace/default
+  :architecture akeyless-dev-workspace
+  :assertions ((resource-exists aws-vpc "akeyless-dev-vpc")
+               (resource-exists aws-subnet "akeyless-dev-subnet")
+               (ref-valid)))
+

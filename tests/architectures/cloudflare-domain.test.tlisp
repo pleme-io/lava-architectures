@@ -1,0 +1,10 @@
+
+(deflava-test cloudflare-domain/default
+  :architecture cloudflare-domain
+  :bindings (:account-id "00000000000000000000000000000000"
+             :domain "smoke.example.com"
+             :zone-id "11111111111111111111111111111111")
+  :assertions ((resource-exists cloudflare-zone "smoke.example.com")
+               (resource-exists cloudflare-dns-record "smoke.example.com-root")
+               (ref-valid)))
+

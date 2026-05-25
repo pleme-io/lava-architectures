@@ -1,0 +1,8 @@
+
+(deflava-test continuous-monitoring/default
+  :architecture continuous-monitoring
+  :assertions ((resource-exists aws-cloudwatch-log-group "fleet-log-group")
+               (resource-exists aws-cloudwatch-metric-alarm "fleet-error-alarm")
+               (resource-exists aws-sns-topic "fleet-alerts")
+               (ref-valid)))
+

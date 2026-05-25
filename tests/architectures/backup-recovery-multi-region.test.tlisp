@@ -1,0 +1,9 @@
+
+(deflava-test backup-recovery-multi-region/default
+  :architecture backup-recovery-multi-region
+  :assertions ((resource-exists aws-backup-vault "prod-primary")
+               (resource-exists aws-backup-vault "prod-secondary")
+               (resource-exists aws-backup-plan "prod-plan")
+               (resource-count aws-backup-vault 2)
+               (ref-valid)))
+

@@ -1,0 +1,7 @@
+
+(deflava-test ami-test-iam/default
+  :architecture ami-test-iam
+  :assertions ((resource-exists aws-iam-role "packer-test-role")
+               (resource-exists aws-iam-role-policy-attachment "packer-test-attach-ssm")
+               (ref-valid)))
+

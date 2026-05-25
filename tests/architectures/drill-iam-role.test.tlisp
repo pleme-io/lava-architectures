@@ -1,0 +1,7 @@
+
+(deflava-test drill-iam-role/default
+  :architecture drill-iam-role
+  :assertions ((resource-exists aws-iam-role "drill-role")
+               (resource-exists aws-iam-role-policy "drill-inline")
+               (ref-valid)))
+

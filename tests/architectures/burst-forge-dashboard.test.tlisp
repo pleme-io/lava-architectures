@@ -1,0 +1,7 @@
+
+(deflava-test burst-forge-dashboard/default
+  :architecture burst-forge-dashboard
+  :assertions ((resource-exists datadog-dashboard "burst-forge-dashboard")
+               (resource-exists datadog-monitor "burst-forge-experiment-failure")
+               (ref-valid)))
+

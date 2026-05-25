@@ -1,0 +1,18 @@
+
+(deflava-interface burst-forge-dashboard
+  :doc "burst-forge experiment dashboard + monitors"
+  :inputs ((:name :type :string :default "burst-forge")))
+
+(deflava-architecture burst-forge-dashboard
+  :inputs ((:name "burst-forge"))
+  :resources (
+    (datadog-dashboard "{name}-dashboard"
+      :title "{name}"
+      :description "burst-forge experiment dashboard"
+      :layout-type "ordered")
+    (datadog-monitor "{name}-experiment-failure"
+      :name "{name}-experiment-failure"
+      :type "query alert"
+      :message "burst-forge experiment failed"
+      :query "sum(last_5m):sum:burst_forge.experiments.failed.as_count > 0")))
+

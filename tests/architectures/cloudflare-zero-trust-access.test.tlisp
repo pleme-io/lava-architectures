@@ -1,0 +1,10 @@
+
+(deflava-test cloudflare-zero-trust-access/default
+  :architecture cloudflare-zero-trust-access
+  :bindings (:account-id "00000000000000000000000000000000"
+             :zone-id "11111111111111111111111111111111"
+             :app-domain "smoke.example.com")
+  :assertions ((resource-exists cloudflare-access-application "app-app")
+               (resource-exists cloudflare-access-policy "app-policy")
+               (ref-valid)))
+

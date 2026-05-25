@@ -1,0 +1,17 @@
+
+(deflava-interface drill-iam-role
+  :doc "IAM role for drill-runner pre-prod workloads"
+  :inputs ((:name :type :string :default "drill"))
+  :outputs ((:role-arn :type :string :required #t)))
+
+(deflava-architecture drill-iam-role
+  :inputs ((:name "drill"))
+  :resources (
+    (aws-iam-role "{name}-role"
+      :name "{name}-runner"
+      :assume-role-policy "placeholder-trust")
+    (aws-iam-role-policy "{name}-inline"
+      :role (ref aws-iam-role "{name}-role" id)
+      :policy "placeholder-drill-policy"))
+  :result (drill-iam :role-arn (ref aws-iam-role "{name}-role" arn)))
+
