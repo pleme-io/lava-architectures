@@ -2,16 +2,16 @@
 //! lava suite. Pangea-architectures analog.
 //!
 //! Every architecture is authored as a `.tlisp` source file in
-//! `architectures/`. The Rust side is a typed in-memory interpreter
-//! (sexpr parser + evaluator) that magma consumes directly — no
-//! intermediate JSON file written to disk.
+//! `architectures/`. The interpreter lives in
+//! [`lava_eval`](https://crates.io/crates/lava-eval) — this crate is
+//! the architecture catalog + loader, not the engine.
 //!
 //! ## Pipeline
 //!
 //! ```text
 //! architectures/<name>.tlisp        ← author here
 //!         │
-//!         ▼  sexpr::parse → eval::eval_architecture
+//!         ▼  lava_eval::eval_architecture
 //! lava_core::Architecture           ← typed Rust value
 //!         │
 //!         ▼  Architecture::render_terraform_json
@@ -31,11 +31,7 @@
 
 #![allow(clippy::module_name_repetitions)]
 
-pub mod eval;
-pub mod sexpr;
-
-pub use eval::{eval_architecture, EvalError, InputBindings};
-pub use sexpr::{parse, Atom, Sx};
+pub use lava_eval::{eval_architecture, parse, Atom, EvalError, InputBindings, ParseError, Sx};
 
 /// Built-in path for the bundled `.tlisp` architectures. Magma reads
 /// these at runtime; users can also load their own architectures from
@@ -44,6 +40,11 @@ pub const ARCHITECTURE_DIR: &str = "architectures";
 
 /// Convenience: load + evaluate one of the bundled architectures by
 /// name. Looks up `architectures/<name>.tlisp` relative to CARGO_MANIFEST_DIR.
+///
+/// # Errors
+/// Returns [`EvalError::NotArchForm`] wrapping the I/O failure if the
+/// file cannot be read; any evaluation failure bubbles up from
+/// [`lava_eval::eval_architecture`].
 pub fn load_bundled(
     name: &str,
     bindings: &InputBindings,
@@ -51,9 +52,8 @@ pub fn load_bundled(
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(ARCHITECTURE_DIR)
         .join(format!("{name}.tlisp"));
-    let src = std::fs::read_to_string(&path).map_err(|e| {
-        EvalError::NotArchForm(format!("io: {} — {e}", path.display()))
-    })?;
+    let src = std::fs::read_to_string(&path)
+        .map_err(|e| EvalError::NotArchForm(format!("io: {} — {e}", path.display())))?;
     eval_architecture(&src, bindings)
 }
 

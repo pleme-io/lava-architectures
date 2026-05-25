@@ -6,7 +6,7 @@ license = "MIT"
 name = "lava-architectures"
 readme = "README.md"
 repository = "https://github.com/pleme-io/lava-architectures"
-version = "0.1.1"
+version = "0.1.2"
 
 [lib]
 name = "lava_architectures"
@@ -23,3 +23,4 @@ thiserror = "2"
 lava-core = { git = "https://github.com/pleme-io/lava-core", branch = "main" }
 lava-arch = { git = "https://github.com/pleme-io/lava-arch", branch = "main" }
 lava-contracts = { git = "https://github.com/pleme-io/lava-contracts", branch = "main" }
+lava-eval = { git = "https://github.com/pleme-io/lava-eval", branch = "main" }
