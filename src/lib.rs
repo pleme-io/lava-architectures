@@ -105,6 +105,15 @@ fn bundled_source_path(name: &str) -> std::path::PathBuf {
         .join(format!("{name}.tlisp"))
 }
 
+/// Read the raw `.tlisp` source for a bundled architecture. Returns
+/// `None` when the name doesn't resolve. Lets consumers (e.g.
+/// magma-lava's source-aware façade) drive evaluation from in-memory
+/// source instead of needing the file on disk.
+#[must_use]
+pub fn bundled_source(name: &str) -> Option<String> {
+    std::fs::read_to_string(bundled_source_path(name)).ok()
+}
+
 /// Built-in path for the bundled `.tlisp` architectures. Magma reads
 /// these at runtime; users can also load their own architectures from
 /// any path via `eval_architecture(&fs::read_to_string(path)?, ...)`.
