@@ -46,7 +46,7 @@ dependencies = [
 
 [[package]]
 name = "lava-architectures"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "indexmap",
  "lava-arch",
@@ -111,8 +111,8 @@ dependencies = [
 
 [[package]]
 name = "lava-test"
-version = "0.1.0"
-source = "git+https://github.com/pleme-io/lava-test?branch=main#cbedb53c0664a1441c78872e2d4fefaa5228a4f9"
+version = "0.1.1"
+source = "git+https://github.com/pleme-io/lava-test?branch=main#4768381a91dd1c362ad2c293d8227adc36047ab9"
 dependencies = [
  "indexmap",
  "lava-core",
