@@ -221,7 +221,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.1.10";
+        version = "0.1.11";
         edition = "2024";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
         libName = "lava_architectures";
@@ -359,8 +359,8 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/lava-eval";
-          rev = "b77c0a609ce80a7bae531c6e58e40e5ed096b1f1";
-          sha256 = "0d3zxpwyy6gdv2a5nfmgx2c0q8qrkwrbx1lccjkbycqx1zhzyi16";
+          rev = "0b51e6b1a6d67685a4737343944e546656eff213";
+          sha256 = "0zsz9bjf0jij3igv30vbvrs8xrhfj5x8gdy62z816lyv4xf68l8z";
         };
         libName = "lava_eval";
         authors = [
@@ -406,13 +406,13 @@ rec {
       };
       "lava-schema" = rec {
         crateName = "lava-schema";
-        version = "0.1.1";
+        version = "0.1.2";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/lava-schema";
-          rev = "cf64f9eddfec7e6b83fffc1a662ae0ebdf84b239";
-          sha256 = "19x3am9w5lrijagnrm5cxfg7dmzvh34gmzamny837zdb10zl7c53";
+          rev = "0af48f1b28b7ebe53260fe001858438d8773b83d";
+          sha256 = "13i6bcn8am9cmz1iqip7xhnxzb54509rpqs56j252464mcl343id";
         };
         libName = "lava_schema";
         authors = [
@@ -442,13 +442,13 @@ rec {
       };
       "lava-test" = rec {
         crateName = "lava-test";
-        version = "0.1.1";
+        version = "0.1.2";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/lava-test";
-          rev = "4768381a91dd1c362ad2c293d8227adc36047ab9";
-          sha256 = "0nc7m1gdlbpfy15k9b2iwxlwj8gl99jqvklhbhq94fppwd8v578h";
+          rev = "e959fccebd2ac472802851d9d5b6427937fa870c";
+          sha256 = "1l9qdhdzzb0cnacmzxn9ily9sncnsdz0p7jc94ay9kmf3j2nad97";
         };
         libName = "lava_test";
         authors = [
