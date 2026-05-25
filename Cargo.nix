@@ -221,7 +221,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.1.6";
+        version = "0.1.7";
         edition = "2024";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
         libName = "lava_architectures";
@@ -344,13 +344,13 @@ rec {
       };
       "lava-eval" = rec {
         crateName = "lava-eval";
-        version = "0.1.3";
+        version = "0.1.4";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/lava-eval";
-          rev = "955b6f670d782e4b0b2b5a023c25dd31baf6b3eb";
-          sha256 = "1a5wwf55ychqcfz52ympg1gd5dx8r22ij5a2f3z1653rppdhmisw";
+          rev = "0cbc644a218fe8a52ba49a9e83ecf80d77d5927f";
+          sha256 = "07npy3wd94pks8shyl1a4ax2ks5l120s10wnnprg4pb4q794sx5r";
         };
         libName = "lava_eval";
         authors = [
