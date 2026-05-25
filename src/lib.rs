@@ -31,6 +31,7 @@
 
 #![allow(clippy::module_name_repetitions)]
 
+pub use lava_core::{Architecture, ResourceRef, Value};
 pub use lava_eval::{
     eval_architecture, eval_architecture_with_schema, interfaces_in_source, parse, Atom,
     EvalError, InputBindings, InterfaceParseError, ParseError, Sx,
