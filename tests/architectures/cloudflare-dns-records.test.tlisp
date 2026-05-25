@@ -1,0 +1,14 @@
+(deflava-test cloudflare-dns-records/default
+  :architecture cloudflare-dns-records
+  :bindings (:zone-id "abcdef1234567890")
+  :assertions ((resource-exists cloudflare-dns-record "root-cname")
+               (resource-exists cloudflare-dns-record "www-cname")
+               (resource-exists cloudflare-dns-record "api-cname")
+               (resource-exists cloudflare-dns-record "wildcard-staging-cname")
+               (resource-exists cloudflare-dns-record "acme-challenge-txt")
+               (resource-count cloudflare-dns-record 5)
+               (attribute-equals cloudflare-dns-record "root-cname" :proxied #t)
+               (attribute-equals cloudflare-dns-record "api-cname" :proxied #t)
+               (attribute-equals cloudflare-dns-record "wildcard-staging-cname" :proxied #f)
+               (attribute-equals cloudflare-dns-record "acme-challenge-txt" :type "TXT")
+               (ref-valid)))

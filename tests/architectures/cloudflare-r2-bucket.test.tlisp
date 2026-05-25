@@ -1,0 +1,14 @@
+(deflava-test cloudflare-r2-bucket/default
+  :architecture cloudflare-r2-bucket
+  :bindings (:account-id  "abcd1234abcd1234abcd1234abcd1234"
+             :bucket-name "smoke-bucket"
+             :zone-id     "ffff1234ffff1234ffff1234ffff1234"
+             :domain      "cdn.example.com")
+  :assertions ((resource-exists cloudflare-r2-bucket "smoke-bucket")
+               (resource-exists cloudflare-r2-bucket-cors "smoke-bucket-cors")
+               (resource-exists cloudflare-r2-custom-domain "smoke-bucket-custom-domain")
+               (resource-exists cloudflare-dns-record "smoke-bucket-cname")
+               (resource-count cloudflare-r2-bucket 1)
+               (attribute-equals cloudflare-r2-bucket "smoke-bucket" :location "wnam")
+               (attribute-equals cloudflare-dns-record "smoke-bucket-cname" :proxied #t)
+               (ref-valid)))

@@ -1,0 +1,13 @@
+(deflava-test public-dns/default
+  :architecture public-dns
+  :bindings (:name "smoke" :domain "smoke.example.com")
+  :assertions ((resource-exists aws-route53-zone "smoke-zone")
+               (resource-exists aws-kms-key "smoke-dnssec-key")
+               (resource-exists aws-route53-key-signing-key "smoke-ksk")
+               (resource-exists aws-route53-hosted-zone-dnssec "smoke-dnssec")
+               (resource-exists aws-cloudwatch-log-group "smoke-dns-query-log")
+               (resource-exists aws-route53-query-log "smoke-query-log")
+               (resource-count aws-route53-zone 1)
+               (attribute-equals aws-route53-zone "smoke-zone" :name "smoke.example.com")
+               (attribute-equals aws-kms-key "smoke-dnssec-key" :key-usage "SIGN_VERIFY")
+               (ref-valid)))

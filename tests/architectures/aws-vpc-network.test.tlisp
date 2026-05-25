@@ -1,0 +1,25 @@
+;; aws-vpc-network.test.tlisp — typed lava-test assertions covering
+;; the default-binding render of aws-vpc-network.tlisp.
+
+(deflava-test aws-vpc-network/default
+  :architecture aws-vpc-network
+  :assertions ((resource-exists aws-vpc "main-vpc")
+               (resource-exists aws-internet-gateway "main-igw")
+               (resource-exists aws-nat-gateway "main-nat")
+               (resource-exists aws-eip "main-nat-eip")
+               (resource-exists aws-security-group "main-default-sg")
+               (resource-count aws-subnet 6)
+               (attribute-equals aws-vpc "main-vpc" :cidr-block "10.0.0.0/16")
+               (attribute-equals aws-vpc "main-vpc" :enable-dns-support #t)
+               (attribute-equals aws-vpc "main-vpc" :enable-dns-hostnames #t)
+               (no-resource aws-vpc "ghost-vpc")
+               (ref-valid)))
+
+(deflava-test aws-vpc-network/two-az-override
+  :architecture aws-vpc-network
+  :bindings (:name "preview")
+  :assertions ((resource-exists aws-vpc "preview-vpc")
+               (resource-exists aws-internet-gateway "preview-igw")
+               ;; 3 AZs default × 2 public+private = 6; no override here.
+               (resource-count aws-subnet 6)
+               (no-resource aws-vpc "main-vpc")))

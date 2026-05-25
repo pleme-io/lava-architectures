@@ -1,0 +1,17 @@
+(deflava-test akeyless-platform/default
+  :architecture akeyless-platform
+  :bindings (:zone-id "ffff1234ffff1234ffff1234ffff1234"
+             :domain  "akeyless.example.com")
+  :assertions ((resource-exists aws-acm-certificate "akeyless-platform-wildcard")
+               (resource-exists aws-acm-certificate-validation "akeyless-platform-cert-complete")
+               (resource-exists aws-route53-record "akeyless-platform-cert-validation")
+               (resource-exists aws-route53-record "api-akeyless-platform")
+               (resource-exists aws-route53-record "web-akeyless-platform")
+               (resource-exists aws-route53-record "console-akeyless-platform")
+               (resource-exists aws-iam-role "akeyless-platform-lb-controller")
+               (resource-exists aws-iam-role-policy-attachment "akeyless-platform-lb-controller-policy")
+               (resource-count aws-route53-record 4)
+               (attribute-equals aws-acm-certificate "akeyless-platform-wildcard" :validation-method "DNS")
+               (attribute-equals aws-iam-role-policy-attachment "akeyless-platform-lb-controller-policy"
+                                 :policy-arn "arn:aws:iam::aws:policy/AWSLoadBalancerControllerIAMPolicy")
+               (ref-valid)))
