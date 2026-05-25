@@ -14,6 +14,16 @@
 ;; terraform.json by lava-eval (consumed by magma in-memory at plan/
 ;; apply time — no intermediate file dump).
 
+(deflava-interface aws-vpc-network
+  :doc "Standard AWS VPC + IGW + public/private subnets + NAT"
+  :inputs ((:name               :type :string :default "main")
+           (:cidr               :type :cidr-block :default "10.0.0.0/16")
+           (:availability-zones :type (:list-of :availability-zone :min-items 1 :max-items 6))
+           (:environment        :type :string :default "production"))
+  :outputs ((:vpc-id             :type :string :required #t)
+            (:public-subnet-ids  :type (:list-of :string))
+            (:private-subnet-ids :type (:list-of :string))))
+
 (deflava-architecture aws-vpc-network
   :inputs ((:name "main")
            (:cidr "10.0.0.0/16")

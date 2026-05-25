@@ -32,29 +32,11 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub use lava_eval::{
-    eval_architecture, eval_architecture_with_schema, parse, Atom, EvalError, InputBindings,
-    ParseError, Sx,
+    eval_architecture, eval_architecture_with_schema, interfaces_in_source, parse, Atom,
+    EvalError, InputBindings, InterfaceParseError, ParseError, Sx,
 };
 pub use lava_schema::{Field, Interface, SchemaError};
 pub use lava_types::Type;
-
-/// Hand-curated registry of typed interfaces for every bundled
-/// architecture. Each entry mirrors the `(deflava-interface …)` form
-/// authored at the head of the corresponding `.tlisp` source — the
-/// tlisp reader doesn't yet ingest the form into a typed Interface, so
-/// the registry is the authoritative typed gate consumers use with
-/// `eval_architecture_with_schema`.
-///
-/// Returns `None` for unknown names; never panics.
-#[must_use]
-pub fn interface_for(name: &str) -> Option<Interface> {
-    match name {
-        "aws-vpc-network" => Some(aws_vpc_network_interface()),
-        "cloudflare-dns-records" => Some(cloudflare_dns_records_interface()),
-        "akeyless-secrets" => Some(akeyless_secrets_interface()),
-        _ => None,
-    }
-}
 
 /// Closed list of every bundled architecture this crate ships. Drives
 /// the per-★★ CLOSED-LOOP MASS-SYNTHESIS verification matrix in
@@ -68,144 +50,26 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("akeyless-secrets", 6),       // ci_auth + k8s_auth + db_pwd + api_key + db_target + role
 ];
 
-fn aws_vpc_network_interface() -> Interface {
-    let mut iface = Interface::new("aws-vpc-network");
-    iface.doc = Some("Standard AWS VPC + IGW + public/private subnets + NAT".into());
-    iface
-        .inputs
-        .insert("name".into(), Field::optional(Type::String).with_default("main"));
-    iface.inputs.insert(
-        "cidr".into(),
-        Field::optional(Type::CidrBlock).with_default("10.0.0.0/16"),
-    );
-    iface.inputs.insert(
-        "availability-zones".into(),
-        Field::optional(Type::ListOf {
-            inner: Box::new(Type::AvailabilityZone),
-            min_items: Some(1),
-            max_items: Some(6),
-        }),
-    );
-    iface.inputs.insert(
-        "environment".into(),
-        Field::optional(Type::String).with_default("production"),
-    );
-    iface.outputs.insert("vpc-id".into(), Field::strict(Type::String));
-    iface
-        .outputs
-        .insert("public-subnet-ids".into(), Field::strict(Type::ListOf {
-            inner: Box::new(Type::String),
-            min_items: None,
-            max_items: None,
-        }));
-    iface
-        .outputs
-        .insert("private-subnet-ids".into(), Field::strict(Type::ListOf {
-            inner: Box::new(Type::String),
-            min_items: None,
-            max_items: None,
-        }));
-    iface
+/// Derived view of the typed interface registered alongside each
+/// bundled architecture. Reads the `.tlisp` source at runtime and
+/// pulls out the matching `(deflava-interface …)` form via
+/// `lava_eval::interfaces_in_source`.
+///
+/// The .tlisp source is the single source of truth — no hand-curated
+/// Rust mirror to drift. Returns `None` when the name is unknown OR
+/// the source ships no interface form for that name.
+#[must_use]
+pub fn interface_for(name: &str) -> Option<Interface> {
+    let path = bundled_source_path(name);
+    let src = std::fs::read_to_string(&path).ok()?;
+    let ifaces = interfaces_in_source(&src).ok()?;
+    ifaces.into_iter().find(|i| i.name == name)
 }
 
-fn cloudflare_dns_records_interface() -> Interface {
-    let mut iface = Interface::new("cloudflare-dns-records");
-    iface.doc = Some("Typed bundle of Cloudflare DNS records on one zone.".into());
-    iface
-        .inputs
-        .insert("zone-id".into(), Field::strict(Type::String));
-    iface
-        .inputs
-        .insert("name-prefix".into(), Field::optional(Type::String).with_default(""));
-    iface.inputs.insert(
-        "root-target".into(),
-        Field::optional(Type::Hostname).with_default("example.com.cdn.cloudflare.net"),
-    );
-    iface.inputs.insert(
-        "apex-domain".into(),
-        Field::optional(Type::Hostname).with_default("example.com"),
-    );
-    iface.inputs.insert(
-        "api-origin".into(),
-        Field::optional(Type::Hostname).with_default("origin.example.com"),
-    );
-    iface.inputs.insert(
-        "acme-token".into(),
-        Field::optional(Type::String).with_default("placeholder-acme-token"),
-    );
-    iface
-        .outputs
-        .insert("zone-id".into(), Field::strict(Type::String));
-    iface.outputs.insert(
-        "record-ids".into(),
-        Field::strict(Type::ListOf {
-            inner: Box::new(Type::String),
-            min_items: Some(1),
-            max_items: None,
-        }),
-    );
-    iface
-        .outputs
-        .insert("proxied-record".into(), Field::strict(Type::String));
-    iface
-}
-
-fn akeyless_secrets_interface() -> Interface {
-    let mut iface = Interface::new("akeyless-secrets");
-    iface.doc = Some(
-        "Akeyless secrets management: auth methods + static secrets + DB target + role.".into(),
-    );
-    iface
-        .inputs
-        .insert("name-prefix".into(), Field::strict(Type::String));
-    iface.inputs.insert(
-        "ci-ip".into(),
-        Field::optional(Type::CidrBlock).with_default("10.0.0.0/8"),
-    );
-    iface.inputs.insert(
-        "k8s-namespace".into(),
-        Field::optional(Type::String).with_default("default"),
-    );
-    iface.inputs.insert(
-        "db-host".into(),
-        Field::optional(Type::Hostname).with_default("db.example.com"),
-    );
-    iface
-        .inputs
-        .insert("db-port".into(), Field::optional(Type::String).with_default("5432"));
-    iface.inputs.insert(
-        "db-name".into(),
-        Field::optional(Type::String).with_default("production"),
-    );
-    iface.inputs.insert(
-        "db-admin-user".into(),
-        Field::optional(Type::String).with_default("admin"),
-    );
-    iface.inputs.insert(
-        "db-admin-password".into(),
-        Field::optional(Type::String).with_default("admin-password"),
-    );
-    iface.inputs.insert(
-        "db-password".into(),
-        Field::optional(Type::String).with_default("change-me"),
-    );
-    iface.inputs.insert(
-        "api-key".into(),
-        Field::optional(Type::String).with_default("change-me"),
-    );
-    iface
-        .outputs
-        .insert("ci-auth-id".into(), Field::strict(Type::String));
-    iface
-        .outputs
-        .insert("k8s-auth-id".into(), Field::strict(Type::String));
-    iface
-        .outputs
-        .insert("db-target-id".into(), Field::strict(Type::String));
-    iface
-        .outputs
-        .insert("app-role-id".into(), Field::strict(Type::String));
-    iface
+fn bundled_source_path(name: &str) -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(ARCHITECTURE_DIR)
+        .join(format!("{name}.tlisp"))
 }
 
 /// Built-in path for the bundled `.tlisp` architectures. Magma reads
@@ -224,9 +88,7 @@ pub fn load_bundled(
     name: &str,
     bindings: &InputBindings,
 ) -> Result<lava_core::Architecture, EvalError> {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join(ARCHITECTURE_DIR)
-        .join(format!("{name}.tlisp"));
+    let path = bundled_source_path(name);
     let src = std::fs::read_to_string(&path)
         .map_err(|e| EvalError::NotArchForm(format!("io: {} — {e}", path.display())))?;
     eval_architecture(&src, bindings)
