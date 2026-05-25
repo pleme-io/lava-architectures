@@ -56,6 +56,18 @@ pub fn interface_for(name: &str) -> Option<Interface> {
     }
 }
 
+/// Closed list of every bundled architecture this crate ships. Drives
+/// the per-★★ CLOSED-LOOP MASS-SYNTHESIS verification matrix in
+/// `tests/architecture_matrix.rs` — adding a new architecture without
+/// extending this list fails the build.
+///
+/// Each entry: `(architecture-name, expected-minimum-resource-count)`.
+pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
+    ("aws-vpc-network", 10),       // 1 vpc + 1 igw + 3 public + 3 private + 1 eip + 1 nat + 1 sg
+    ("cloudflare-dns-records", 5), // root + www + api + wildcard + acme
+    ("akeyless-secrets", 6),       // ci_auth + k8s_auth + db_pwd + api_key + db_target + role
+];
+
 fn aws_vpc_network_interface() -> Interface {
     let mut iface = Interface::new("aws-vpc-network");
     iface.doc = Some("Standard AWS VPC + IGW + public/private subnets + NAT".into());
