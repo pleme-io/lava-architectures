@@ -90,6 +90,45 @@ fn minimal_bindings(
                 bag.insert(k.to_string(), v.to_string());
             }
         }
+        "cloudflare-tunnel" => {
+            for (k, v) in [
+                ("account-id", "00000000000000000000000000000000"),
+                ("tunnel-name", "matrix-tunnel"),
+                ("tunnel-secret", "placeholder-32-byte-secret-value-x"),
+                ("zone-id", "11111111111111111111111111111111"),
+                ("hostname", "matrix.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "cloudflare-zone" => {
+            for (k, v) in [
+                ("account-id", "00000000000000000000000000000000"),
+                ("domain", "matrix.example.com"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
+        "aws-eks-cluster" => {
+            for (k, v) in [("name", "matrix")] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+            b.set_list("subnet-ids", vec!["subnet-aaa".into(), "subnet-bbb".into()]);
+            bag.insert("subnet-ids".to_string(), "subnet-aaa,subnet-bbb".to_string());
+        }
+        "split-horizon-dns" => {
+            for (k, v) in [
+                ("name", "matrix"),
+                ("domain", "matrix.example.com"),
+                ("vpc-id", "vpc-aaaaaaaa"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
         _ => {}
     }
     (b, bag)

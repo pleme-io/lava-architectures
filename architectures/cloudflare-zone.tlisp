@@ -1,0 +1,47 @@
+;; cloudflare-zone.tlisp — port of
+;; pangea-architectures/lib/pangea/architectures/cloudflare_zone.rb
+;;
+;; Provisions a Cloudflare zone + production-default zone settings:
+;; always-use-HTTPS, opportunistic encryption, TLS 1.3, automatic HTTPS
+;; rewrites, brotli, HTTP/3, IPv6, full SSL/TLS mode, minimum TLS 1.2.
+
+(deflava-interface cloudflare-zone
+  :doc "Cloudflare hosted zone + secure-default zone settings"
+  :inputs ((:account-id  :type :string   :required #t)
+           (:domain      :type :hostname :required #t)
+           (:zone-type   :type (:enum "full" "partial") :default "full")
+           (:plan        :type :string   :default "free"))
+  :outputs ((:zone-id     :type :string :required #t)
+            (:domain      :type :hostname :required #t)))
+
+(deflava-architecture cloudflare-zone
+  :inputs ((:account-id "00000000000000000000000000000000")
+           (:domain     "example.com")
+           (:zone-type  "full")
+           (:plan       "free"))
+
+  :resources (
+    ;; The hosted zone.
+    (cloudflare-zone "{domain}"
+      :account-id "{account-id}"
+      :zone       "{domain}"
+      :type       "{zone-type}"
+      :plan       "{plan}")
+
+    ;; Production-default settings — bundles every secure-by-default
+    ;; toggle the pangea ruby caller layers on.
+    (cloudflare-zone-settings-override "{domain}-settings"
+      :zone-id (ref cloudflare-zone "{domain}" id)
+      :always-use-https           "on"
+      :opportunistic-encryption   "on"
+      :automatic-https-rewrites   "on"
+      :tls-1-3                    "on"
+      :min-tls-version            "1.2"
+      :ssl                        "full"
+      :brotli                     "on"
+      :http3                      "on"
+      :ipv6                       "on"))
+
+  :result (cloudflare-zone
+    :zone-id (ref cloudflare-zone "{domain}" id)
+    :domain  "{domain}"))

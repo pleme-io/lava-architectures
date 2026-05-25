@@ -132,6 +132,23 @@ fn apply_required_bindings(
         ],
         "cloudflare-dns-records" => &[("zone-id", "abcdef1234567890")],
         "akeyless-secrets" => &[("name-prefix", "smoke")],
+        "cloudflare-tunnel" => &[
+            ("account-id", "00000000000000000000000000000000"),
+            ("tunnel-name", "smoke-tunnel"),
+            ("tunnel-secret", "placeholder-secret"),
+            ("zone-id", "ffffffffffffffffffffffffffffffff"),
+            ("hostname", "smoke.example.com"),
+        ],
+        "cloudflare-zone" => &[
+            ("account-id", "00000000000000000000000000000000"),
+            ("domain", "smoke.example.com"),
+        ],
+        "aws-eks-cluster" => &[("name", "smoke")],
+        "split-horizon-dns" => &[
+            ("name", "smoke"),
+            ("domain", "smoke.example.com"),
+            ("vpc-id", "vpc-1234"),
+        ],
         _ => &[],
     };
     for (k, v) in pairs {

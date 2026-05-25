@@ -1,0 +1,54 @@
+;; split-horizon-dns.tlisp — paired public Route53 zone + private
+;; VPC-associated zone for the same domain. Public records resolve
+;; externally; private records (same name) shadow them inside the VPC.
+;; Useful for serving the same hostname internally + externally with
+;; different targets.
+
+(deflava-interface split-horizon-dns
+  :doc "Split-horizon DNS: paired public + private Route53 zones"
+  :inputs ((:name   :type :string   :required #t)
+           (:domain :type :hostname :required #t)
+           (:vpc-id :type :string   :required #t)
+           (:public-target  :type :hostname :default "public.example.com")
+           (:private-target :type :hostname :default "internal.example.com"))
+  :outputs ((:public-zone-id   :type :string :required #t)
+            (:private-zone-id  :type :string :required #t)))
+
+(deflava-architecture split-horizon-dns
+  :inputs ((:name            "main")
+           (:domain          "example.com")
+           (:vpc-id          "vpc-aaaaaaaa")
+           (:public-target   "public.example.com")
+           (:private-target  "internal.example.com"))
+
+  :resources (
+    ;; Public hosted zone (internet-resolvable).
+    (aws-route53-zone "{name}-public"
+      :name "{domain}"
+      :tags ((Name "{name}-public") (Tier "public")))
+
+    ;; Private hosted zone (VPC-association makes it internal-only).
+    (aws-route53-zone "{name}-private"
+      :name "{domain}"
+      :vpc-id "{vpc-id}"
+      :tags ((Name "{name}-private") (Tier "private")))
+
+    ;; Apex public record → public target.
+    (aws-route53-record "{name}-public-apex"
+      :zone-id (ref aws-route53-zone "{name}-public" id)
+      :name    "{domain}"
+      :type    "CNAME"
+      :ttl     300
+      :records ("{public-target}"))
+
+    ;; Apex private record (same hostname) → private target.
+    (aws-route53-record "{name}-private-apex"
+      :zone-id (ref aws-route53-zone "{name}-private" id)
+      :name    "{domain}"
+      :type    "CNAME"
+      :ttl     60
+      :records ("{private-target}")))
+
+  :result (split-horizon
+    :public-zone-id  (ref aws-route53-zone "{name}-public"  id)
+    :private-zone-id (ref aws-route53-zone "{name}-private" id)))

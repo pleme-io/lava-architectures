@@ -1,0 +1,9 @@
+(deflava-test cloudflare-zone/default
+  :architecture cloudflare-zone
+  :bindings (:account-id "00000000000000000000000000000000"
+             :domain "smoke.example.com")
+  :assertions ((resource-exists cloudflare-zone "smoke.example.com")
+               (resource-exists cloudflare-zone-settings-override "smoke.example.com-settings")
+               (attribute-equals cloudflare-zone "smoke.example.com" :zone "smoke.example.com")
+               (attribute-equals cloudflare-zone-settings-override "smoke.example.com-settings" :min-tls-version "1.2")
+               (ref-valid)))

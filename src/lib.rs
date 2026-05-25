@@ -52,6 +52,10 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("cloudflare-r2-bucket", 4),   // bucket + cors + custom-domain + cname
     ("public-dns", 6),             // zone + kms + ksk + dnssec + log-group + query-log
     ("akeyless-platform", 8),      // acm + validation + complete + 3 svc cnames + role + attach
+    ("cloudflare-tunnel", 3),      // tunnel + config + cname (cname conditional via :when)
+    ("cloudflare-zone", 2),        // zone + settings-override
+    ("aws-eks-cluster", 4),        // cluster role + node role + cluster + node-group
+    ("split-horizon-dns", 4),      // 2 zones + 2 apex records
 ];
 
 /// Derived view of the typed interface registered alongside each

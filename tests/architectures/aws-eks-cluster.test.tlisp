@@ -1,0 +1,11 @@
+(deflava-test aws-eks-cluster/default
+  :architecture aws-eks-cluster
+  :bindings (:name "smoke")
+  :assertions ((resource-exists aws-iam-role "smoke-cluster-role")
+               (resource-exists aws-iam-role "smoke-node-role")
+               (resource-exists aws-eks-cluster "smoke")
+               (resource-exists aws-eks-node-group "smoke-default")
+               (resource-count aws-iam-role 2)
+               (attribute-equals aws-eks-cluster "smoke" :version "1.30")
+               (attribute-equals aws-eks-node-group "smoke-default" :node-group-name "smoke-default")
+               (ref-valid)))

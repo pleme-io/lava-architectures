@@ -1,0 +1,13 @@
+(deflava-test cloudflare-tunnel/default
+  :architecture cloudflare-tunnel
+  :bindings (:account-id "00000000000000000000000000000000"
+             :tunnel-name "smoke-tunnel"
+             :tunnel-secret "placeholder-secret"
+             :zone-id "ffffffffffffffffffffffffffffffff"
+             :hostname "smoke.example.com")
+  :assertions ((resource-exists cloudflare-tunnel "smoke-tunnel")
+               (resource-exists cloudflare-tunnel-config "smoke-tunnel-config")
+               (resource-exists cloudflare-dns-record "smoke-tunnel-public-cname")
+               (resource-count cloudflare-tunnel 1)
+               (attribute-equals cloudflare-tunnel "smoke-tunnel" :name "smoke-tunnel")
+               (ref-valid)))
