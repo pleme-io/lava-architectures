@@ -221,7 +221,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.1.11";
+        version = "0.1.12";
         edition = "2024";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
         libName = "lava_architectures";
@@ -354,13 +354,13 @@ rec {
       };
       "lava-eval" = rec {
         crateName = "lava-eval";
-        version = "0.1.6";
+        version = "0.1.7";
         edition = "2024";
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/lava-eval";
-          rev = "0b51e6b1a6d67685a4737343944e546656eff213";
-          sha256 = "0zsz9bjf0jij3igv30vbvrs8xrhfj5x8gdy62z816lyv4xf68l8z";
+          rev = "6427102543b0a36a1923a9c9e077c47243ae1c84";
+          sha256 = "027w31sdc5slbixp500win1i84kp3xdxva8rsy8dsdxp5cxnhn6g";
         };
         libName = "lava_eval";
         authors = [
@@ -447,8 +447,8 @@ rec {
         workspace_member = null;
         src = pkgs.fetchgit {
           url = "https://github.com/pleme-io/lava-test";
-          rev = "e959fccebd2ac472802851d9d5b6427937fa870c";
-          sha256 = "1l9qdhdzzb0cnacmzxn9ily9sncnsdz0p7jc94ay9kmf3j2nad97";
+          rev = "5252c52b3aac972ffc9b90c8dacfb652b1ac53e9";
+          sha256 = "1dq6711bqxaqqqwg9xw5yasx5ggcmflfj2k1kbpzyih86bm674bd";
         };
         libName = "lava_test";
         authors = [
