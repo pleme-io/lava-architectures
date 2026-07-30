@@ -1,24 +1,25 @@
-
 (deflava-interface cloudflare-domain
   :doc "Cloudflare-registered domain + basic DNS"
   :inputs ((:account-id :type :string :required #t)
-           (:domain :type :hostname :required #t)
-           (:zone-id :type :string :required #t)))
+    (:domain :type :hostname :required #t)
+    (:zone-id :type :string :required #t)))
 
 (deflava-architecture cloudflare-domain
   :inputs ((:account-id "00000000000000000000000000000000")
-           (:domain "example.com")
-           (:zone-id "11111111111111111111111111111111"))
-  :resources (
-    (cloudflare-zone "{domain}"
-      :account-id "{account-id}"
-      :zone "{domain}"
-      :type "full")
-    (cloudflare-dns-record "{domain}-root"
-      :zone-id "{zone-id}"
-      :name "@"
-      :type "A"
-      :content "1.2.3.4"
-      :ttl 1
-      :proxied #t)))
-
+    (:domain "example.com")
+    (:zone-id "11111111111111111111111111111111"))
+  :resources ((cloudflare-zone "{domain}" :account-id "{account-id}" :zone "{domain}" :type "full")
+    (cloudflare-dns-record
+      "{domain}-root"
+      :zone-id
+      "{zone-id}"
+      :name
+      "@"
+      :type
+      "A"
+      :content
+      "1.2.3.4"
+      :ttl
+      1
+      :proxied
+      #t)))

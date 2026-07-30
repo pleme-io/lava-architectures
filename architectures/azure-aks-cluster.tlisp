@@ -1,23 +1,26 @@
-
 (deflava-interface azure-aks-cluster
   :doc "Azure AKS cluster scaffold"
   :inputs ((:name :type :string :default "demo")
-           (:location :type :string :default "eastus2")
-           (:resource-group :type :string :required #t)
-           (:dns-prefix :type :string :default "demo")
-           (:k8s-version :type :string :default "1.30")))
+    (:location :type :string :default "eastus2")
+    (:resource-group :type :string :required #t)
+    (:dns-prefix :type :string :default "demo")
+    (:k8s-version :type :string :default "1.30")))
 
 (deflava-architecture azure-aks-cluster
   :inputs ((:name "demo")
-           (:location "eastus2")
-           (:resource-group "demo-rg")
-           (:dns-prefix "demo")
-           (:k8s-version "1.30"))
-  :resources (
-    (azurerm-kubernetes-cluster "{name}-aks"
-      :name "{name}"
-      :location "{location}"
-      :resource-group-name "{resource-group}"
-      :dns-prefix "{dns-prefix}"
-      :kubernetes-version "{k8s-version}")))
-
+    (:location "eastus2")
+    (:resource-group "demo-rg")
+    (:dns-prefix "demo")
+    (:k8s-version "1.30"))
+  :resources ((azurerm-kubernetes-cluster
+     "{name}-aks"
+     :name
+     "{name}"
+     :location
+     "{location}"
+     :resource-group-name
+     "{resource-group}"
+     :dns-prefix
+     "{dns-prefix}"
+     :kubernetes-version
+     "{k8s-version}")))

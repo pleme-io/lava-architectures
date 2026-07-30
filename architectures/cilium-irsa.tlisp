@@ -1,27 +1,33 @@
-
 ;; cilium-irsa.tlisp — IRSA role for cilium agent (k8s service account)
 (deflava-interface cilium-irsa
   :doc "AWS IAM role + policy for Cilium operator via IRSA"
   :inputs ((:name :type :string :default "cilium")
-           (:cluster-name :type :string :required #t)
-           (:oidc-provider-arn :type :string :required #t))
+    (:cluster-name :type :string :required #t)
+    (:oidc-provider-arn :type :string :required #t))
   :outputs ((:role-arn :type :string :required #t)))
 
 (deflava-architecture cilium-irsa
   :inputs ((:name "cilium")
-           (:cluster-name "demo")
-           (:oidc-provider-arn "arn:aws:iam::000000000000:oidc-provider/example"))
-  :resources (
-    (aws-iam-role "{name}-irsa-role"
-      :name "{name}-{cluster-name}-irsa"
-      :assume-role-policy "placeholder-oidc-trust"
-      :tags ((Name "{name}-irsa") (ManagedBy "cilium")))
-    (aws-iam-policy "{name}-policy"
-      :name "{name}-{cluster-name}-policy"
-      :policy "placeholder-cilium-policy")
-    (aws-iam-role-policy-attachment "{name}-attach"
-      :role (ref aws-iam-role "{name}-irsa-role" name)
-      :policy-arn (ref aws-iam-policy "{name}-policy" arn)))
-  :result (cilium-irsa
-    :role-arn (ref aws-iam-role "{name}-irsa-role" arn)))
-
+    (:cluster-name "demo")
+    (:oidc-provider-arn "arn:aws:iam::000000000000:oidc-provider/example"))
+  :resources ((aws-iam-role
+     "{name}-irsa-role"
+     :name
+     "{name}-{cluster-name}-irsa"
+     :assume-role-policy
+     "placeholder-oidc-trust"
+     :tags
+     ((Name "{name}-irsa") (ManagedBy "cilium")))
+    (aws-iam-policy
+      "{name}-policy"
+      :name
+      "{name}-{cluster-name}-policy"
+      :policy
+      "placeholder-cilium-policy")
+    (aws-iam-role-policy-attachment
+      "{name}-attach"
+      :role
+      (ref aws-iam-role "{name}-irsa-role" name)
+      :policy-arn
+      (ref aws-iam-policy "{name}-policy" arn)))
+  :result (cilium-irsa :role-arn (ref aws-iam-role "{name}-irsa-role" arn)))

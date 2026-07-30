@@ -1,39 +1,53 @@
-
 ;; cloudflare-tunnel-ingress.tlisp — Cloudflare Tunnel with N ingress hosts
 (deflava-interface cloudflare-tunnel-ingress
   :doc "Cloudflare Tunnel with multiple typed ingress hostnames"
   :inputs ((:account-id :type :string :required #t)
-           (:tunnel-name :type :string :required #t)
-           (:tunnel-secret :type :string :required #t)
-           (:zone-id :type :string :required #t)
-           (:domain :type :hostname :required #t))
+    (:tunnel-name :type :string :required #t)
+    (:tunnel-secret :type :string :required #t)
+    (:zone-id :type :string :required #t)
+    (:domain :type :hostname :required #t))
   :outputs ((:tunnel-id :type :string :required #t)))
 
 (deflava-architecture cloudflare-tunnel-ingress
   :inputs ((:account-id "00000000000000000000000000000000")
-           (:tunnel-name "ingress-tunnel")
-           (:tunnel-secret "placeholder-secret")
-           (:zone-id "11111111111111111111111111111111")
-           (:domain "ingress.example.com"))
-  :resources (
-    (cloudflare-tunnel "{tunnel-name}"
-      :account-id "{account-id}"
-      :name "{tunnel-name}"
-      :secret "{tunnel-secret}")
-    (cloudflare-dns-record "{tunnel-name}-app-cname"
-      :zone-id "{zone-id}"
-      :name "app.{domain}"
-      :type "CNAME"
-      :content (ref cloudflare-tunnel "{tunnel-name}" cname)
-      :ttl 1
-      :proxied #t)
-    (cloudflare-dns-record "{tunnel-name}-api-cname"
-      :zone-id "{zone-id}"
-      :name "api.{domain}"
-      :type "CNAME"
-      :content (ref cloudflare-tunnel "{tunnel-name}" cname)
-      :ttl 1
-      :proxied #t))
-  :result (tunnel-ingress
-    :tunnel-id (ref cloudflare-tunnel "{tunnel-name}" id)))
-
+    (:tunnel-name "ingress-tunnel")
+    (:tunnel-secret "placeholder-secret")
+    (:zone-id "11111111111111111111111111111111")
+    (:domain "ingress.example.com"))
+  :resources ((cloudflare-tunnel
+     "{tunnel-name}"
+     :account-id
+     "{account-id}"
+     :name
+     "{tunnel-name}"
+     :secret
+     "{tunnel-secret}")
+    (cloudflare-dns-record
+      "{tunnel-name}-app-cname"
+      :zone-id
+      "{zone-id}"
+      :name
+      "app.{domain}"
+      :type
+      "CNAME"
+      :content
+      (ref cloudflare-tunnel "{tunnel-name}" cname)
+      :ttl
+      1
+      :proxied
+      #t)
+    (cloudflare-dns-record
+      "{tunnel-name}-api-cname"
+      :zone-id
+      "{zone-id}"
+      :name
+      "api.{domain}"
+      :type
+      "CNAME"
+      :content
+      (ref cloudflare-tunnel "{tunnel-name}" cname)
+      :ttl
+      1
+      :proxied
+      #t))
+  :result (tunnel-ingress :tunnel-id (ref cloudflare-tunnel "{tunnel-name}" id)))

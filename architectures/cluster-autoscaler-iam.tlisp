@@ -1,22 +1,24 @@
-
 ;; cluster-autoscaler-iam.tlisp — IRSA for k8s cluster-autoscaler
 (deflava-interface cluster-autoscaler-iam
   :doc "IRSA role + policy for k8s cluster-autoscaler on EKS"
   :inputs ((:name :type :string :default "cluster-autoscaler")
-           (:cluster-name :type :string :required #t))
+    (:cluster-name :type :string :required #t))
   :outputs ((:role-arn :type :string :required #t)))
 
 (deflava-architecture cluster-autoscaler-iam
-  :inputs ((:name "cluster-autoscaler")
-           (:cluster-name "demo"))
-  :resources (
-    (aws-iam-role "{name}-role"
-      :name "{name}-{cluster-name}"
-      :assume-role-policy "placeholder-oidc-trust"
-      :tags ((Service "cluster-autoscaler")))
-    (aws-iam-role-policy "{name}-inline"
-      :role (ref aws-iam-role "{name}-role" id)
-      :policy "placeholder-asg-policy"))
-  :result (ca-iam
-    :role-arn (ref aws-iam-role "{name}-role" arn)))
-
+  :inputs ((:name "cluster-autoscaler") (:cluster-name "demo"))
+  :resources ((aws-iam-role
+     "{name}-role"
+     :name
+     "{name}-{cluster-name}"
+     :assume-role-policy
+     "placeholder-oidc-trust"
+     :tags
+     ((Service "cluster-autoscaler")))
+    (aws-iam-role-policy
+      "{name}-inline"
+      :role
+      (ref aws-iam-role "{name}-role" id)
+      :policy
+      "placeholder-asg-policy"))
+  :result (ca-iam :role-arn (ref aws-iam-role "{name}-role" arn)))

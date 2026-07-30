@@ -1,35 +1,41 @@
-
 ;; cloudflare-headless-blog.tlisp — R2 bucket + worker + DNS for static blog
 (deflava-interface cloudflare-headless-blog
   :doc "Cloudflare headless blog: R2 storage + worker + DNS routing"
   :inputs ((:account-id :type :string :required #t)
-           (:bucket-name :type :string :required #t)
-           (:zone-id :type :string :required #t)
-           (:hostname :type :hostname :required #t)
-           (:worker-name :type :string :default "blog-worker"))
-  :outputs ((:bucket-name :type :string :required #t)
-            (:worker-name :type :string :required #t)))
+    (:bucket-name :type :string :required #t)
+    (:zone-id :type :string :required #t)
+    (:hostname :type :hostname :required #t)
+    (:worker-name :type :string :default "blog-worker"))
+  :outputs ((:bucket-name :type :string :required #t) (:worker-name :type :string :required #t)))
 
 (deflava-architecture cloudflare-headless-blog
   :inputs ((:account-id "00000000000000000000000000000000")
-           (:bucket-name "demo-blog")
-           (:zone-id "11111111111111111111111111111111")
-           (:hostname "blog.example.com")
-           (:worker-name "blog-worker"))
-  :resources (
-    (cloudflare-r2-bucket "{bucket-name}"
-      :account-id "{account-id}"
-      :name "{bucket-name}")
-    (cloudflare-workers-script "{worker-name}"
-      :account-id "{account-id}"
-      :name "{worker-name}"
-      :content "placeholder-worker-source")
-    (cloudflare-workers-domain "{worker-name}-domain"
-      :account-id "{account-id}"
-      :hostname "{hostname}"
-      :zone-id "{zone-id}"
-      :service "{worker-name}"))
-  :result (headless-blog
-    :bucket-name "{bucket-name}"
-    :worker-name "{worker-name}"))
-
+    (:bucket-name "demo-blog")
+    (:zone-id "11111111111111111111111111111111")
+    (:hostname "blog.example.com")
+    (:worker-name "blog-worker"))
+  :resources ((cloudflare-r2-bucket
+     "{bucket-name}"
+     :account-id
+     "{account-id}"
+     :name
+     "{bucket-name}")
+    (cloudflare-workers-script
+      "{worker-name}"
+      :account-id
+      "{account-id}"
+      :name
+      "{worker-name}"
+      :content
+      "placeholder-worker-source")
+    (cloudflare-workers-domain
+      "{worker-name}-domain"
+      :account-id
+      "{account-id}"
+      :hostname
+      "{hostname}"
+      :zone-id
+      "{zone-id}"
+      :service
+      "{worker-name}"))
+  :result (headless-blog :bucket-name "{bucket-name}" :worker-name "{worker-name}"))

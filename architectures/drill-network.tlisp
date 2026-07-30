@@ -1,28 +1,35 @@
-
 ;; drill-network.tlisp — Minimal pre-prod VPC for drill-runner workloads
 (deflava-interface drill-network
   :doc "Minimal VPC for pre-production drill-runner workloads"
-  :inputs ((:name :type :string :default "drill")
-           (:cidr :type :cidr-block :default "10.99.0.0/16"))
-  :outputs ((:vpc-id :type :string :required #t)
-            (:subnet-id :type :string :required #t)))
+  :inputs ((:name :type :string :default "drill") (:cidr :type :cidr-block :default "10.99.0.0/16"))
+  :outputs ((:vpc-id :type :string :required #t) (:subnet-id :type :string :required #t)))
 
 (deflava-architecture drill-network
   :inputs ((:name "drill") (:cidr "10.99.0.0/16"))
-  :resources (
-    (aws-vpc "{name}-vpc"
-      :cidr-block "{cidr}"
-      :enable-dns-support #t
-      :tags ((Name "{name}-vpc") (Tier "drill")))
-    (aws-subnet "{name}-subnet"
-      :vpc-id (ref aws-vpc "{name}-vpc" id)
-      :cidr-block "{cidr}"
-      :tags ((Name "{name}-subnet") (Tier "drill")))
-    (aws-security-group "{name}-sg"
-      :vpc-id (ref aws-vpc "{name}-vpc" id)
-      :name-prefix "{name}-sg-"
-      :description "Drill SG"))
+  :resources ((aws-vpc
+     "{name}-vpc"
+     :cidr-block
+     "{cidr}"
+     :enable-dns-support
+     #t
+     :tags
+     ((Name "{name}-vpc") (Tier "drill")))
+    (aws-subnet
+      "{name}-subnet"
+      :vpc-id
+      (ref aws-vpc "{name}-vpc" id)
+      :cidr-block
+      "{cidr}"
+      :tags
+      ((Name "{name}-subnet") (Tier "drill")))
+    (aws-security-group
+      "{name}-sg"
+      :vpc-id
+      (ref aws-vpc "{name}-vpc" id)
+      :name-prefix
+      "{name}-sg-"
+      :description
+      "Drill SG"))
   :result (drill-net
     :vpc-id (ref aws-vpc "{name}-vpc" id)
     :subnet-id (ref aws-subnet "{name}-subnet" id)))
-

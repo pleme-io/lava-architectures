@@ -1,25 +1,31 @@
-
 ;; ami-production-iam.tlisp — IAM role for Packer production AMI bake
 (deflava-interface ami-production-iam
   :doc "IAM role + instance profile for production Packer AMI builds"
   :inputs ((:name :type :string :default "packer-prod"))
-  :outputs ((:role-arn :type :string :required #t)
-            (:instance-profile :type :string :required #t)))
+  :outputs ((:role-arn :type :string :required #t) (:instance-profile :type :string :required #t)))
 
 (deflava-architecture ami-production-iam
   :inputs ((:name "packer-prod"))
-  :resources (
-    (aws-iam-role "{name}-role"
-      :name "{name}-role"
-      :assume-role-policy "placeholder-ec2-trust"
-      :tags ((Name "{name}-role")))
-    (aws-iam-role-policy-attachment "{name}-attach-managed"
-      :role (ref aws-iam-role "{name}-role" name)
-      :policy-arn "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore")
-    (aws-iam-instance-profile "{name}-instance-profile"
-      :name "{name}-instance-profile"
-      :role (ref aws-iam-role "{name}-role" name)))
+  :resources ((aws-iam-role
+     "{name}-role"
+     :name
+     "{name}-role"
+     :assume-role-policy
+     "placeholder-ec2-trust"
+     :tags
+     ((Name "{name}-role")))
+    (aws-iam-role-policy-attachment
+      "{name}-attach-managed"
+      :role
+      (ref aws-iam-role "{name}-role" name)
+      :policy-arn
+      "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore")
+    (aws-iam-instance-profile
+      "{name}-instance-profile"
+      :name
+      "{name}-instance-profile"
+      :role
+      (ref aws-iam-role "{name}-role" name)))
   :result (ami-iam
     :role-arn (ref aws-iam-role "{name}-role" arn)
     :instance-profile (ref aws-iam-instance-profile "{name}-instance-profile" name)))
-

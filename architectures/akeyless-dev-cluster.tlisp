@@ -1,21 +1,27 @@
-
 (deflava-interface akeyless-dev-cluster
   :doc "Akeyless dev EKS cluster scaffold"
   :inputs ((:name :type :string :default "akeyless-dev")
-           (:k8s-version :type :string :default "1.30"))
+    (:k8s-version :type :string :default "1.30"))
   :outputs ((:cluster-name :type :string :required #t)))
 
 (deflava-architecture akeyless-dev-cluster
   :inputs ((:name "akeyless-dev") (:k8s-version "1.30"))
-  :resources (
-    (aws-eks-cluster "{name}-cluster"
-      :name "{name}"
-      :version "{k8s-version}"
-      :role-arn "placeholder-role-arn"
-      :tags ((Env "dev") (Service "akeyless")))
-    (aws-iam-role "{name}-node-role"
-      :name "{name}-node"
-      :assume-role-policy "placeholder-trust"
-      :tags ((Env "dev"))))
+  :resources ((aws-eks-cluster
+     "{name}-cluster"
+     :name
+     "{name}"
+     :version
+     "{k8s-version}"
+     :role-arn
+     "placeholder-role-arn"
+     :tags
+     ((Env "dev") (Service "akeyless")))
+    (aws-iam-role
+      "{name}-node-role"
+      :name
+      "{name}-node"
+      :assume-role-policy
+      "placeholder-trust"
+      :tags
+      ((Env "dev"))))
   :result (cluster :cluster-name (ref aws-eks-cluster "{name}-cluster" name)))
-

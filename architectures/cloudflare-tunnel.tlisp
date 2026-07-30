@@ -7,52 +7,68 @@
 
 (deflava-interface cloudflare-tunnel
   :doc "Cloudflare Tunnel + ingress + DNS routing"
-  :inputs ((:account-id   :type :string   :required #t)
-           (:tunnel-name  :type :string   :required #t)
-           (:tunnel-secret :type :string  :required #t)
-           (:zone-id      :type :string   :required #t)
-           (:hostname     :type :hostname :required #t)
-           (:origin       :type :hostname :default "localhost:8080")
-           (:emit-cname   :type :boolean  :default #t))
-  :outputs ((:tunnel-id      :type :string :required #t)
-            (:tunnel-token   :type :string :required #t)
-            (:public-cname   :type :string)))
+  :inputs ((:account-id :type :string :required #t)
+    (:tunnel-name :type :string :required #t)
+    (:tunnel-secret :type :string :required #t)
+    (:zone-id :type :string :required #t)
+    (:hostname :type :hostname :required #t)
+    (:origin :type :hostname :default "localhost:8080")
+    (:emit-cname :type :boolean :default #t))
+  :outputs ((:tunnel-id :type :string :required #t)
+    (:tunnel-token :type :string :required #t)
+    (:public-cname :type :string)))
 
 (deflava-architecture cloudflare-tunnel
-  :inputs ((:account-id    "00000000000000000000000000000000")
-           (:tunnel-name   "demo-tunnel")
-           (:tunnel-secret "placeholder-32-byte-secret-value-x")
-           (:zone-id       "11111111111111111111111111111111")
-           (:hostname      "demo.example.com")
-           (:origin        "localhost:8080")
-           (:emit-cname    "true"))
+  :inputs ((:account-id "00000000000000000000000000000000")
+    (:tunnel-name "demo-tunnel")
+    (:tunnel-secret "placeholder-32-byte-secret-value-x")
+    (:zone-id "11111111111111111111111111111111")
+    (:hostname "demo.example.com")
+    (:origin "localhost:8080")
+    (:emit-cname "true"))
 
-  :resources (
-    ;; The tunnel itself.
-    (cloudflare-tunnel "{tunnel-name}"
-      :account-id "{account-id}"
-      :name       "{tunnel-name}"
-      :secret     "{tunnel-secret}")
+  :resources ((cloudflare-tunnel
+     "{tunnel-name}"
+     :account-id
+     "{account-id}"
+     :name
+     "{tunnel-name}"
+     :secret
+     "{tunnel-secret}")
 
     ;; Tunnel config: ingress rule from hostname → origin.
-    (cloudflare-tunnel-config "{tunnel-name}-config"
-      :account-id "{account-id}"
-      :tunnel-id  (ref cloudflare-tunnel "{tunnel-name}" id)
-      :ingress-hostname "{hostname}"
-      :ingress-service  "http://{origin}")
+    (cloudflare-tunnel-config
+      "{tunnel-name}-config"
+      :account-id
+      "{account-id}"
+      :tunnel-id
+      (ref cloudflare-tunnel "{tunnel-name}" id)
+      :ingress-hostname
+      "{hostname}"
+      :ingress-service
+      "http://{origin}")
 
     ;; Public CNAME pointing at the tunnel's cfargotunnel.com address.
-    (cloudflare-dns-record "{tunnel-name}-public-cname"
-      :when    "{emit-cname}"
-      :zone-id "{zone-id}"
-      :name    "{hostname}"
-      :type    "CNAME"
-      :content (ref cloudflare-tunnel "{tunnel-name}" cname)
-      :ttl     1
-      :proxied #t
-      :comment "Tunnel ingress for {tunnel-name}"))
+    (cloudflare-dns-record
+      "{tunnel-name}-public-cname"
+      :when
+      "{emit-cname}"
+      :zone-id
+      "{zone-id}"
+      :name
+      "{hostname}"
+      :type
+      "CNAME"
+      :content
+      (ref cloudflare-tunnel "{tunnel-name}" cname)
+      :ttl
+      1
+      :proxied
+      #t
+      :comment
+      "Tunnel ingress for {tunnel-name}"))
 
   :result (cloudflare-tunnel
-    :tunnel-id    (ref cloudflare-tunnel "{tunnel-name}" id)
+    :tunnel-id (ref cloudflare-tunnel "{tunnel-name}" id)
     :tunnel-token (ref cloudflare-tunnel "{tunnel-name}" tunnel_token)
     :public-cname (ref cloudflare-dns-record "{tunnel-name}-public-cname" id)))

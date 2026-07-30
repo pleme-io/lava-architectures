@@ -9,60 +9,83 @@
 
 (deflava-interface cloudflare-r2-bucket
   :doc "Cloudflare R2 bucket with CORS + custom domain + proxied CNAME"
-  :inputs ((:account-id   :type :string   :required #t)
-           (:bucket-name  :type :string   :required #t)
-           (:location     :type :string   :default "wnam")
-           (:zone-id      :type :string   :required #t)
-           (:domain       :type :hostname :required #t)
-           (:cname-short  :type :string   :default "cdn")
-           (:cors-origin  :type :string   :default "*"))
-  :outputs ((:bucket-name      :type :string :required #t)
-            (:custom-domain    :type :string)
-            (:cname-record-id  :type :string)))
+  :inputs ((:account-id :type :string :required #t)
+    (:bucket-name :type :string :required #t)
+    (:location :type :string :default "wnam")
+    (:zone-id :type :string :required #t)
+    (:domain :type :hostname :required #t)
+    (:cname-short :type :string :default "cdn")
+    (:cors-origin :type :string :default "*"))
+  :outputs ((:bucket-name :type :string :required #t)
+    (:custom-domain :type :string)
+    (:cname-record-id :type :string)))
 
 (deflava-architecture cloudflare-r2-bucket
-  :inputs ((:account-id  "00000000000000000000000000000000")
-           (:bucket-name "demo-bucket")
-           (:location    "wnam")
-           (:zone-id     "11111111111111111111111111111111")
-           (:domain      "cdn.example.com")
-           (:cname-short "cdn")
-           (:cors-origin "*"))
+  :inputs ((:account-id "00000000000000000000000000000000")
+    (:bucket-name "demo-bucket")
+    (:location "wnam")
+    (:zone-id "11111111111111111111111111111111")
+    (:domain "cdn.example.com")
+    (:cname-short "cdn")
+    (:cors-origin "*"))
 
-  :resources (
-    (cloudflare-r2-bucket "{bucket-name}"
-      :account-id "{account-id}"
-      :name       "{bucket-name}"
-      :location   "{location}")
+  :resources ((cloudflare-r2-bucket
+     "{bucket-name}"
+     :account-id
+     "{account-id}"
+     :name
+     "{bucket-name}"
+     :location
+     "{location}")
 
     ;; CORS: simplified single-rule shape; downstream callers can
     ;; layer additional rules by emitting more cloudflare-r2-bucket-cors
     ;; resources. tlisp doesn't support arbitrary nested kv-maps yet —
     ;; flat tags + lists only.
-    (cloudflare-r2-bucket-cors "{bucket-name}-cors"
-      :account-id  "{account-id}"
-      :bucket-name "{bucket-name}"
-      :allowed-origins ("{cors-origin}")
-      :allowed-methods ("GET" "HEAD")
-      :max-age-seconds 3600)
+    (cloudflare-r2-bucket-cors
+      "{bucket-name}-cors"
+      :account-id
+      "{account-id}"
+      :bucket-name
+      "{bucket-name}"
+      :allowed-origins
+      ("{cors-origin}")
+      :allowed-methods
+      ("GET" "HEAD")
+      :max-age-seconds
+      3600)
 
-    (cloudflare-r2-custom-domain "{bucket-name}-custom-domain"
-      :account-id  "{account-id}"
-      :bucket-name "{bucket-name}"
-      :domain      "{domain}"
-      :zone-id     "{zone-id}"
-      :enabled     #t)
+    (cloudflare-r2-custom-domain
+      "{bucket-name}-custom-domain"
+      :account-id
+      "{account-id}"
+      :bucket-name
+      "{bucket-name}"
+      :domain
+      "{domain}"
+      :zone-id
+      "{zone-id}"
+      :enabled
+      #t)
 
-    (cloudflare-dns-record "{bucket-name}-cname"
-      :zone-id "{zone-id}"
-      :name    "{cname-short}"
-      :type    "CNAME"
-      :content "{account-id}.r2.cloudflarestorage.com"
-      :ttl     1
-      :proxied #t
-      :comment "R2 custom domain for {bucket-name}"))
+    (cloudflare-dns-record
+      "{bucket-name}-cname"
+      :zone-id
+      "{zone-id}"
+      :name
+      "{cname-short}"
+      :type
+      "CNAME"
+      :content
+      "{account-id}.r2.cloudflarestorage.com"
+      :ttl
+      1
+      :proxied
+      #t
+      :comment
+      "R2 custom domain for {bucket-name}"))
 
   :result (cloudflare-r2
-    :bucket-name     "{bucket-name}"
-    :custom-domain   "{domain}"
+    :bucket-name "{bucket-name}"
+    :custom-domain "{domain}"
     :cname-record-id (ref cloudflare-dns-record "{bucket-name}-cname" id)))

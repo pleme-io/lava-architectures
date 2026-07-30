@@ -17,80 +17,118 @@
 
 (deflava-interface cloudflare-dns-records
   :doc "Typed bundle of Cloudflare DNS records on one zone."
-  :inputs ((:zone-id     :type :string         :required #t)
-           (:name-prefix :type :string         :default "")
-           (:root-target :type :hostname       :default "example.com.cdn.cloudflare.net")
-           (:apex-domain :type :hostname       :default "example.com")
-           (:api-origin  :type :hostname       :default "origin.example.com")
-           (:acme-token  :type :string         :default "placeholder-acme-token"))
-  :outputs ((:zone-id          :type :string)
-            (:record-ids       :type (:list-of :string))
-            (:proxied-record   :type :string)))
+  :inputs ((:zone-id :type :string :required #t)
+    (:name-prefix :type :string :default "")
+    (:root-target :type :hostname :default "example.com.cdn.cloudflare.net")
+    (:apex-domain :type :hostname :default "example.com")
+    (:api-origin :type :hostname :default "origin.example.com")
+    (:acme-token :type :string :default "placeholder-acme-token"))
+  :outputs ((:zone-id :type :string)
+    (:record-ids :type (:list-of :string))
+    (:proxied-record :type :string)))
 
 (deflava-architecture cloudflare-dns-records
-  :inputs ((:zone-id     "11112222333344445555666677778888")
-           (:name-prefix "")
-           (:root-target "example.com.cdn.cloudflare.net")
-           (:apex-domain "example.com")
-           (:api-origin  "origin.example.com")
-           (:acme-token  "placeholder-acme-token"))
+  :inputs ((:zone-id "11112222333344445555666677778888")
+    (:name-prefix "")
+    (:root-target "example.com.cdn.cloudflare.net")
+    (:apex-domain "example.com")
+    (:api-origin "origin.example.com")
+    (:acme-token "placeholder-acme-token"))
 
-  :resources (
-    ;; Apex (root) — CNAME flattening via Cloudflare.
-    (cloudflare-dns-record "{name-prefix}root-cname"
-      :zone-id "{zone-id}"
-      :name    "@"
-      :type    "CNAME"
-      :content "{root-target}"
-      :ttl     1
-      :proxied #t
-      :comment "apex CNAME flattening")
+  :resources ((cloudflare-dns-record
+     "{name-prefix}root-cname"
+     :zone-id
+     "{zone-id}"
+     :name
+     "@"
+     :type
+     "CNAME"
+     :content
+     "{root-target}"
+     :ttl
+     1
+     :proxied
+     #t
+     :comment
+     "apex CNAME flattening")
 
     ;; www subdomain.
-    (cloudflare-dns-record "{name-prefix}www-cname"
-      :zone-id "{zone-id}"
-      :name    "www"
-      :type    "CNAME"
-      :content "{apex-domain}"
-      :ttl     1
-      :proxied #t
-      :comment "www → apex")
+    (cloudflare-dns-record
+      "{name-prefix}www-cname"
+      :zone-id
+      "{zone-id}"
+      :name
+      "www"
+      :type
+      "CNAME"
+      :content
+      "{apex-domain}"
+      :ttl
+      1
+      :proxied
+      #t
+      :comment
+      "www → apex")
 
     ;; api subdomain — proxied tunnel CNAME.
-    (cloudflare-dns-record "{name-prefix}api-cname"
-      :zone-id "{zone-id}"
-      :name    "api"
-      :type    "CNAME"
-      :content "{api-origin}"
-      :ttl     1
-      :proxied #t
-      :comment "api proxied through Cloudflare")
+    (cloudflare-dns-record
+      "{name-prefix}api-cname"
+      :zone-id
+      "{zone-id}"
+      :name
+      "api"
+      :type
+      "CNAME"
+      :content
+      "{api-origin}"
+      :ttl
+      1
+      :proxied
+      #t
+      :comment
+      "api proxied through Cloudflare")
 
     ;; wildcard for staging subdomains.
-    (cloudflare-dns-record "{name-prefix}wildcard-staging-cname"
-      :zone-id "{zone-id}"
-      :name    "*.staging"
-      :type    "CNAME"
-      :content "{apex-domain}"
-      :ttl     1
-      :proxied #f
-      :comment "wildcard for staging subdomains")
+    (cloudflare-dns-record
+      "{name-prefix}wildcard-staging-cname"
+      :zone-id
+      "{zone-id}"
+      :name
+      "*.staging"
+      :type
+      "CNAME"
+      :content
+      "{apex-domain}"
+      :ttl
+      1
+      :proxied
+      #f
+      :comment
+      "wildcard for staging subdomains")
 
     ;; ACME challenge for SAN cert issuance.
-    (cloudflare-dns-record "{name-prefix}acme-challenge-txt"
-      :zone-id "{zone-id}"
-      :name    "_acme-challenge"
-      :type    "TXT"
-      :content "{acme-token}"
-      :ttl     1
-      :proxied #f
-      :comment "ACME DNS-01 challenge"))
+    (cloudflare-dns-record
+      "{name-prefix}acme-challenge-txt"
+      :zone-id
+      "{zone-id}"
+      :name
+      "_acme-challenge"
+      :type
+      "TXT"
+      :content
+      "{acme-token}"
+      :ttl
+      1
+      :proxied
+      #f
+      :comment
+      "ACME DNS-01 challenge"))
 
   :result (cloudflare-dns
     :zone-id "{zone-id}"
-    :record-ids ((ref cloudflare-dns-record "{name-prefix}root-cname"            id)
-                 (ref cloudflare-dns-record "{name-prefix}www-cname"             id)
-                 (ref cloudflare-dns-record "{name-prefix}api-cname"             id)
-                 (ref cloudflare-dns-record "{name-prefix}wildcard-staging-cname" id)
-                 (ref cloudflare-dns-record "{name-prefix}acme-challenge-txt"    id))
+    :record-ids ((ref cloudflare-dns-record "{name-prefix}root-cname" id)
+      (ref cloudflare-dns-record "{name-prefix}www-cname" id)
+      (ref cloudflare-dns-record "{name-prefix}api-cname" id)
+      (ref cloudflare-dns-record "{name-prefix}wildcard-staging-cname" id)
+      (ref cloudflare-dns-record "{name-prefix}acme-challenge-txt" id))
     :proxied-record (ref cloudflare-dns-record "{name-prefix}api-cname" id)))

@@ -1,39 +1,60 @@
-
 (deflava-interface dns-record-set-typed
   :doc "Typed DNS record bundle with apex / www / mail / verify entries"
   :inputs ((:zone-id :type :string :required #t)
-           (:domain :type :hostname :required #t)
-           (:apex-ip :type :ipv4 :default "1.2.3.4")
-           (:mail-host :type :hostname :default "mx.example.com")))
+    (:domain :type :hostname :required #t)
+    (:apex-ip :type :ipv4 :default "1.2.3.4")
+    (:mail-host :type :hostname :default "mx.example.com")))
 
 (deflava-architecture dns-record-set-typed
   :inputs ((:zone-id "Z0000000000000000000")
-           (:domain "example.com")
-           (:apex-ip "1.2.3.4")
-           (:mail-host "mx.example.com"))
-  :resources (
-    (aws-route53-record "apex-{domain}"
-      :zone-id "{zone-id}"
-      :name "{domain}"
-      :type "A"
-      :ttl 300
-      :records ("{apex-ip}"))
-    (aws-route53-record "www-{domain}"
-      :zone-id "{zone-id}"
-      :name "www.{domain}"
-      :type "A"
-      :ttl 300
-      :records ("{apex-ip}"))
-    (aws-route53-record "mx-{domain}"
-      :zone-id "{zone-id}"
-      :name "{domain}"
-      :type "MX"
-      :ttl 3600
-      :records ("10 {mail-host}"))
-    (aws-route53-record "verify-{domain}"
-      :zone-id "{zone-id}"
-      :name "_verification.{domain}"
-      :type "TXT"
-      :ttl 1
-      :records ("placeholder-verification-token"))))
-
+    (:domain "example.com")
+    (:apex-ip "1.2.3.4")
+    (:mail-host "mx.example.com"))
+  :resources ((aws-route53-record
+     "apex-{domain}"
+     :zone-id
+     "{zone-id}"
+     :name
+     "{domain}"
+     :type
+     "A"
+     :ttl
+     300
+     :records
+     ("{apex-ip}"))
+    (aws-route53-record
+      "www-{domain}"
+      :zone-id
+      "{zone-id}"
+      :name
+      "www.{domain}"
+      :type
+      "A"
+      :ttl
+      300
+      :records
+      ("{apex-ip}"))
+    (aws-route53-record
+      "mx-{domain}"
+      :zone-id
+      "{zone-id}"
+      :name
+      "{domain}"
+      :type
+      "MX"
+      :ttl
+      3600
+      :records
+      ("10 {mail-host}"))
+    (aws-route53-record
+      "verify-{domain}"
+      :zone-id
+      "{zone-id}"
+      :name
+      "_verification.{domain}"
+      :type
+      "TXT"
+      :ttl
+      1
+      :records
+      ("placeholder-verification-token"))))

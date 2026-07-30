@@ -1,16 +1,19 @@
-
 (deflava-interface akeyless-target-attested-infra
   :doc "Akeyless target for attested infrastructure (TPM-backed)"
   :inputs ((:name :type :string :default "attested")
-           (:tpm-pcr-policy :type :string :default "default")))
+    (:tpm-pcr-policy :type :string :default "default")))
 
 (deflava-architecture akeyless-target-attested-infra
   :inputs ((:name "attested") (:tpm-pcr-policy "default"))
-  :resources (
-    (akeyless-target-k8s "{name}-attested-target"
-      :name "/{name}/attested-k8s"
-      :k8s-host "placeholder-k8s-host")
-    (akeyless-role "{name}-attested-role"
-      :name "/{name}/attested-role"
-      :description "Role for TPM-attested workloads")))
-
+  :resources ((akeyless-target-k8s
+     "{name}-attested-target"
+     :name
+     "/{name}/attested-k8s"
+     :k8s-host
+     "placeholder-k8s-host")
+    (akeyless-role
+      "{name}-attested-role"
+      :name
+      "/{name}/attested-role"
+      :description
+      "Role for TPM-attested workloads")))

@@ -11,60 +11,82 @@
 
 (deflava-interface aws-eks-cluster
   :doc "AWS EKS cluster + control plane / node IAM roles + managed node group"
-  :inputs ((:name           :type :string   :required #t)
-           (:k8s-version    :type :string   :default "1.30")
-           (:subnet-ids     :type (:list-of :string) :required #t)
-           (:instance-type  :type :string   :default "t3.medium")
-           (:desired-size   :type :string   :default "2")
-           (:min-size       :type :string   :default "1")
-           (:max-size       :type :string   :default "5"))
+  :inputs ((:name :type :string :required #t)
+    (:k8s-version :type :string :default "1.30")
+    (:subnet-ids :type (:list-of :string) :required #t)
+    (:instance-type :type :string :default "t3.medium")
+    (:desired-size :type :string :default "2")
+    (:min-size :type :string :default "1")
+    (:max-size :type :string :default "5"))
   :outputs ((:cluster-name :type :string :required #t)
-            (:cluster-arn  :type :string)
-            (:role-arn     :type :string)))
+    (:cluster-arn :type :string)
+    (:role-arn :type :string)))
 
 (deflava-architecture aws-eks-cluster
-  :inputs ((:name          "demo")
-           (:k8s-version   "1.30")
-           (:subnet-ids    ("subnet-aaa" "subnet-bbb"))
-           (:instance-type "t3.medium")
-           (:desired-size  "2")
-           (:min-size      "1")
-           (:max-size      "5"))
+  :inputs ((:name "demo")
+    (:k8s-version "1.30")
+    (:subnet-ids ("subnet-aaa" "subnet-bbb"))
+    (:instance-type "t3.medium")
+    (:desired-size "2")
+    (:min-size "1")
+    (:max-size "5"))
 
-  :resources (
-    ;; Control-plane IAM role (assumed by eks.amazonaws.com).
-    (aws-iam-role "{name}-cluster-role"
-      :name "{name}-eks-cluster-role"
-      :assume-role-policy "placeholder-eks-control-plane-trust"
-      :tags ((Name "{name}-cluster-role") (Service "eks")))
+  :resources ((aws-iam-role
+     "{name}-cluster-role"
+     :name
+     "{name}-eks-cluster-role"
+     :assume-role-policy
+     "placeholder-eks-control-plane-trust"
+     :tags
+     ((Name "{name}-cluster-role") (Service "eks")))
 
     ;; Worker node IAM role (assumed by ec2.amazonaws.com).
-    (aws-iam-role "{name}-node-role"
-      :name "{name}-eks-node-role"
-      :assume-role-policy "placeholder-ec2-node-trust"
-      :tags ((Name "{name}-node-role") (Service "eks")))
+    (aws-iam-role
+      "{name}-node-role"
+      :name
+      "{name}-eks-node-role"
+      :assume-role-policy
+      "placeholder-ec2-node-trust"
+      :tags
+      ((Name "{name}-node-role") (Service "eks")))
 
     ;; The cluster itself.
-    (aws-eks-cluster "{name}"
-      :name      "{name}"
-      :version   "{k8s-version}"
-      :role-arn  (ref aws-iam-role "{name}-cluster-role" arn)
-      :vpc-config-subnet-ids "{subnet-ids}"
-      :tags ((Name "{name}") (Service "eks")))
+    (aws-eks-cluster
+      "{name}"
+      :name
+      "{name}"
+      :version
+      "{k8s-version}"
+      :role-arn
+      (ref aws-iam-role "{name}-cluster-role" arn)
+      :vpc-config-subnet-ids
+      "{subnet-ids}"
+      :tags
+      ((Name "{name}") (Service "eks")))
 
     ;; Managed node group.
-    (aws-eks-node-group "{name}-default"
-      :cluster-name (ref aws-eks-cluster "{name}" name)
-      :node-group-name "{name}-default"
-      :node-role-arn   (ref aws-iam-role "{name}-node-role" arn)
-      :subnet-ids      "{subnet-ids}"
-      :scaling-config-desired "{desired-size}"
-      :scaling-config-min     "{min-size}"
-      :scaling-config-max     "{max-size}"
-      :instance-types         ("{instance-type}")
-      :tags ((Name "{name}-default") (Service "eks"))))
+    (aws-eks-node-group
+      "{name}-default"
+      :cluster-name
+      (ref aws-eks-cluster "{name}" name)
+      :node-group-name
+      "{name}-default"
+      :node-role-arn
+      (ref aws-iam-role "{name}-node-role" arn)
+      :subnet-ids
+      "{subnet-ids}"
+      :scaling-config-desired
+      "{desired-size}"
+      :scaling-config-min
+      "{min-size}"
+      :scaling-config-max
+      "{max-size}"
+      :instance-types
+      ("{instance-type}")
+      :tags
+      ((Name "{name}-default") (Service "eks"))))
 
   :result (eks-cluster
     :cluster-name (ref aws-eks-cluster "{name}" name)
-    :cluster-arn  (ref aws-eks-cluster "{name}" arn)
-    :role-arn     (ref aws-iam-role "{name}-cluster-role" arn)))
+    :cluster-arn (ref aws-eks-cluster "{name}" arn)
+    :role-arn (ref aws-iam-role "{name}-cluster-role" arn)))

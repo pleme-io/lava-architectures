@@ -16,76 +16,112 @@
 
 (deflava-interface akeyless-platform
   :doc "Akeyless platform: ACM wildcard + DNS validation + service CNAMEs + LB IAM"
-  :inputs ((:zone-id          :type :string   :required #t)
-           (:domain           :type :hostname :required #t)
-           (:lb-hostname      :type :hostname :default "lb.example.com")
-           (:eks-oidc-issuer  :type :string   :default "https://oidc.example.com")
-           (:eks-cluster-name :type :string   :default "akeyless-eks"))
+  :inputs ((:zone-id :type :string :required #t)
+    (:domain :type :hostname :required #t)
+    (:lb-hostname :type :hostname :default "lb.example.com")
+    (:eks-oidc-issuer :type :string :default "https://oidc.example.com")
+    (:eks-cluster-name :type :string :default "akeyless-eks"))
   :outputs ((:certificate-arn :type :string :required #t)
-            (:role-arn        :type :string)
-            (:zone-id         :type :string :required #t)))
+    (:role-arn :type :string)
+    (:zone-id :type :string :required #t)))
 
 (deflava-architecture akeyless-platform
-  :inputs ((:zone-id          "11111111111111111111111111111111")
-           (:domain           "akeyless.example.com")
-           (:lb-hostname      "lb.example.com")
-           (:eks-oidc-issuer  "https://oidc.example.com")
-           (:eks-cluster-name "akeyless-eks"))
+  :inputs ((:zone-id "11111111111111111111111111111111")
+    (:domain "akeyless.example.com")
+    (:lb-hostname "lb.example.com")
+    (:eks-oidc-issuer "https://oidc.example.com")
+    (:eks-cluster-name "akeyless-eks"))
 
-  :resources (
-    ;; Wildcard ACM certificate (HTTPS for *.<domain>).
-    (aws-acm-certificate "akeyless-platform-wildcard"
-      :domain-name "*.{domain}"
-      :validation-method "DNS"
-      :tags ((Name "akeyless-platform-wildcard") (Service "akeyless")))
+  :resources ((aws-acm-certificate
+     "akeyless-platform-wildcard"
+     :domain-name
+     "*.{domain}"
+     :validation-method
+     "DNS"
+     :tags
+     ((Name "akeyless-platform-wildcard") (Service "akeyless")))
 
     ;; DNS validation record (Terraform's standard pattern).
-    (aws-route53-record "akeyless-platform-cert-validation"
-      :zone-id "{zone-id}"
-      :name "_acme-challenge.akeyless.{domain}"
-      :type "CNAME"
-      :ttl 60
-      :records ("placeholder.dns-validation.aws"))
+    (aws-route53-record
+      "akeyless-platform-cert-validation"
+      :zone-id
+      "{zone-id}"
+      :name
+      "_acme-challenge.akeyless.{domain}"
+      :type
+      "CNAME"
+      :ttl
+      60
+      :records
+      ("placeholder.dns-validation.aws"))
 
     ;; Cert validation completion.
-    (aws-acm-certificate-validation "akeyless-platform-cert-complete"
-      :certificate-arn (ref aws-acm-certificate "akeyless-platform-wildcard" arn)
-      :validation-record-fqdns ("_acme-challenge.akeyless.{domain}"))
+    (aws-acm-certificate-validation
+      "akeyless-platform-cert-complete"
+      :certificate-arn
+      (ref aws-acm-certificate "akeyless-platform-wildcard" arn)
+      :validation-record-fqdns
+      ("_acme-challenge.akeyless.{domain}"))
 
     ;; Service CNAMEs — api, web, console all point at the LB.
-    (aws-route53-record "api-akeyless-platform"
-      :zone-id "{zone-id}"
-      :name "api.{domain}"
-      :type "CNAME"
-      :ttl 300
-      :records ("{lb-hostname}"))
+    (aws-route53-record
+      "api-akeyless-platform"
+      :zone-id
+      "{zone-id}"
+      :name
+      "api.{domain}"
+      :type
+      "CNAME"
+      :ttl
+      300
+      :records
+      ("{lb-hostname}"))
 
-    (aws-route53-record "web-akeyless-platform"
-      :zone-id "{zone-id}"
-      :name "web.{domain}"
-      :type "CNAME"
-      :ttl 300
-      :records ("{lb-hostname}"))
+    (aws-route53-record
+      "web-akeyless-platform"
+      :zone-id
+      "{zone-id}"
+      :name
+      "web.{domain}"
+      :type
+      "CNAME"
+      :ttl
+      300
+      :records
+      ("{lb-hostname}"))
 
-    (aws-route53-record "console-akeyless-platform"
-      :zone-id "{zone-id}"
-      :name "console.{domain}"
-      :type "CNAME"
-      :ttl 300
-      :records ("{lb-hostname}"))
+    (aws-route53-record
+      "console-akeyless-platform"
+      :zone-id
+      "{zone-id}"
+      :name
+      "console.{domain}"
+      :type
+      "CNAME"
+      :ttl
+      300
+      :records
+      ("{lb-hostname}"))
 
     ;; LB controller IAM role for EKS-hosted load balancers.
-    (aws-iam-role "akeyless-platform-lb-controller"
-      :name "akeyless-platform-lb-controller"
-      :assume-role-policy "placeholder-trust-policy"
-      :tags ((Name "akeyless-platform-lb-controller") (Service "akeyless")))
+    (aws-iam-role
+      "akeyless-platform-lb-controller"
+      :name
+      "akeyless-platform-lb-controller"
+      :assume-role-policy
+      "placeholder-trust-policy"
+      :tags
+      ((Name "akeyless-platform-lb-controller") (Service "akeyless")))
 
     ;; Policy attachment (AWSLoadBalancerControllerIAMPolicy).
-    (aws-iam-role-policy-attachment "akeyless-platform-lb-controller-policy"
-      :role (ref aws-iam-role "akeyless-platform-lb-controller" name)
-      :policy-arn "arn:aws:iam::aws:policy/AWSLoadBalancerControllerIAMPolicy"))
+    (aws-iam-role-policy-attachment
+      "akeyless-platform-lb-controller-policy"
+      :role
+      (ref aws-iam-role "akeyless-platform-lb-controller" name)
+      :policy-arn
+      "arn:aws:iam::aws:policy/AWSLoadBalancerControllerIAMPolicy"))
 
   :result (akeyless-platform
     :certificate-arn (ref aws-acm-certificate "akeyless-platform-wildcard" arn)
-    :role-arn        (ref aws-iam-role "akeyless-platform-lb-controller" arn)
-    :zone-id         "{zone-id}"))
+    :role-arn (ref aws-iam-role "akeyless-platform-lb-controller" arn)
+    :zone-id "{zone-id}"))

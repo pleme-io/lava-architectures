@@ -1,17 +1,16 @@
-
 (deflava-interface akeyless-dev-workspace
   :doc "Akeyless dev workspace: VPC + subnet + EKS cluster"
   :inputs ((:name :type :string :default "akeyless-dev")
-           (:cidr :type :cidr-block :default "10.50.0.0/16")))
+    (:cidr :type :cidr-block :default "10.50.0.0/16")))
 
 (deflava-architecture akeyless-dev-workspace
   :inputs ((:name "akeyless-dev") (:cidr "10.50.0.0/16"))
-  :resources (
-    (aws-vpc "{name}-vpc"
-      :cidr-block "{cidr}"
-      :tags ((Name "{name}") (Env "dev")))
-    (aws-subnet "{name}-subnet"
-      :vpc-id (ref aws-vpc "{name}-vpc" id)
-      :cidr-block "{cidr}"
-      :tags ((Name "{name}-subnet")))))
-
+  :resources ((aws-vpc "{name}-vpc" :cidr-block "{cidr}" :tags ((Name "{name}") (Env "dev")))
+    (aws-subnet
+      "{name}-subnet"
+      :vpc-id
+      (ref aws-vpc "{name}-vpc" id)
+      :cidr-block
+      "{cidr}"
+      :tags
+      ((Name "{name}-subnet")))))

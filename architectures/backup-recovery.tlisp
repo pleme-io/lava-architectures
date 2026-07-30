@@ -1,25 +1,26 @@
-
 ;; backup-recovery.tlisp — AWS Backup vault + plan + selection
 (deflava-interface backup-recovery
   :doc "AWS Backup vault + plan + selection (per-resource backup)"
-  :inputs ((:name :type :string :default "prod")
-           (:retention-days :type :string :default "30"))
-  :outputs ((:vault-arn :type :string :required #t)
-            (:plan-id :type :string :required #t)))
+  :inputs ((:name :type :string :default "prod") (:retention-days :type :string :default "30"))
+  :outputs ((:vault-arn :type :string :required #t) (:plan-id :type :string :required #t)))
 
 (deflava-architecture backup-recovery
   :inputs ((:name "prod") (:retention-days "30"))
-  :resources (
-    (aws-backup-vault "{name}-vault"
-      :name "{name}-backup-vault"
-      :tags ((Name "{name}-vault")))
-    (aws-backup-plan "{name}-plan"
-      :name "{name}-backup-plan")
-    (aws-backup-selection "{name}-selection"
-      :plan-id (ref aws-backup-plan "{name}-plan" id)
-      :iam-role-arn "placeholder-backup-role"
-      :name "{name}-selection"))
+  :resources ((aws-backup-vault
+     "{name}-vault"
+     :name
+     "{name}-backup-vault"
+     :tags
+     ((Name "{name}-vault")))
+    (aws-backup-plan "{name}-plan" :name "{name}-backup-plan")
+    (aws-backup-selection
+      "{name}-selection"
+      :plan-id
+      (ref aws-backup-plan "{name}-plan" id)
+      :iam-role-arn
+      "placeholder-backup-role"
+      :name
+      "{name}-selection"))
   :result (backup
     :vault-arn (ref aws-backup-vault "{name}-vault" arn)
     :plan-id (ref aws-backup-plan "{name}-plan" id)))
-
