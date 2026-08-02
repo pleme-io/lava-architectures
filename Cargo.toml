@@ -20,12 +20,12 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 indexmap = { version = "2", features = ["serde"] }
 thiserror = "2"
-lava-core = { git = "https://github.com/pleme-io/lava-core", branch = "main" }
-lava-arch = { git = "https://github.com/pleme-io/lava-arch", branch = "main" }
-lava-contracts = { git = "https://github.com/pleme-io/lava-contracts", branch = "main" }
-lava-eval = { git = "https://github.com/pleme-io/lava-eval", branch = "main" }
-lava-schema = { git = "https://github.com/pleme-io/lava-schema", branch = "main" }
-lava-types = { git = "https://github.com/pleme-io/lava-types", branch = "main" }
+lava-core = "0.1"
+lava-arch = "0.1"
+lava-contracts = "0.1"
+lava-eval = "0.1"
+lava-schema = "0.1"
+lava-types = "0.1"
 
 [dev-dependencies]
-lava-test = { git = "https://github.com/pleme-io/lava-test", branch = "main" }
+lava-test = "0.1"
