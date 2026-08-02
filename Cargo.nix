@@ -206,14 +206,9 @@ rec {
       };
       "lava-arch" = rec {
         crateName = "lava-arch";
-        version = "0.1.4";
+        version = "0.1.6";
         edition = "2024";
-        workspace_member = null;
-        src = pkgs.fetchgit {
-          url = "https://github.com/pleme-io/lava-arch";
-          rev = "32d07b3af1cdc7805bd2111582d4e4e45ba9ec36";
-          sha256 = "0gn2bnjawxdlsgg5dr56640ja0bhgv3p64jv84kbxdj0r09kwxqb";
-        };
+        sha256 = "1jhdn8k6gfnxsl2lbppqj79y5ba3bffvj9rgd034gq4j12m683by";
         libName = "lava_arch";
         authors = [
           "pleme-io"
@@ -246,7 +241,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.1.15";
+        version = "0.1.16";
         edition = "2024";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
         libName = "lava_architectures";
@@ -307,14 +302,9 @@ rec {
       };
       "lava-contracts" = rec {
         crateName = "lava-contracts";
-        version = "0.1.3";
+        version = "0.1.5";
         edition = "2024";
-        workspace_member = null;
-        src = pkgs.fetchgit {
-          url = "https://github.com/pleme-io/lava-contracts";
-          rev = "9d7edb298889d1169b00c32d25ac26b659a1ce9b";
-          sha256 = "0fsbi3azanv3jy0fk6qq4ravanpqqirv43q115rhrhza51gwnfad";
-        };
+        sha256 = "13ymk22bgk45lklavz3477ndkgfpw6f4lkhl0564bc9y2gwvf74g";
         libName = "lava_contracts";
         authors = [
           "pleme-io"
@@ -339,14 +329,9 @@ rec {
       };
       "lava-core" = rec {
         crateName = "lava-core";
-        version = "0.1.6";
+        version = "0.1.7";
         edition = "2024";
-        workspace_member = null;
-        src = pkgs.fetchgit {
-          url = "https://github.com/pleme-io/lava-core";
-          rev = "0f5d5c48087b8019166d2cc49c415d4176112248";
-          sha256 = "0imc42qk02gafnr587chx7bz3lh8idbnhpjjgfxiwwsxwdiq4dwd";
-        };
+        sha256 = "1zrcbx8qhmvdlcqp3013a2lxp8mk1ql61ap9i94zf53nqbfm1fzz";
         libName = "lava_core";
         authors = [
           "pleme-io"
@@ -379,14 +364,9 @@ rec {
       };
       "lava-eval" = rec {
         crateName = "lava-eval";
-        version = "0.1.8";
+        version = "0.1.10";
         edition = "2024";
-        workspace_member = null;
-        src = pkgs.fetchgit {
-          url = "https://github.com/pleme-io/lava-eval";
-          rev = "4274660b3ec2c6f6e0f6c96fbed53a12066dcfcb";
-          sha256 = "12y9gq3m1d6xvmsmxvxa2s71nrimwlmhafih2b4jv1zcgqjggq81";
-        };
+        sha256 = "05h3y87bl9mywxk4qfp89cpk89jw2zxzyad9z8m6097pydrscmk0";
         libName = "lava_eval";
         authors = [
           "pleme-io"
@@ -431,14 +411,9 @@ rec {
       };
       "lava-schema" = rec {
         crateName = "lava-schema";
-        version = "0.1.5";
+        version = "0.1.7";
         edition = "2024";
-        workspace_member = null;
-        src = pkgs.fetchgit {
-          url = "https://github.com/pleme-io/lava-schema";
-          rev = "f2e77f0428d546ded22e9efbbb51df2d579c74bc";
-          sha256 = "14sv7nkjwifjhrh91cdirq113mn4bz6l6l0cmj90sakgdqyc2w90";
-        };
+        sha256 = "15nzi1liva2cg5ds8nix0zhypsf94vihgvajm3r5i6snhv0ncfnq";
         libName = "lava_schema";
         authors = [
           "pleme-io"
@@ -467,14 +442,9 @@ rec {
       };
       "lava-test" = rec {
         crateName = "lava-test";
-        version = "0.1.7";
+        version = "0.1.9";
         edition = "2024";
-        workspace_member = null;
-        src = pkgs.fetchgit {
-          url = "https://github.com/pleme-io/lava-test";
-          rev = "344ebf00d490712e8e338ad0f814d4f4986775de";
-          sha256 = "1zw8jfpg3k7iwswyj2xcjnpwvz6p5ndya24sydppm2y8ax6d5h0n";
-        };
+        sha256 = "0n55b99bg1jq0qgfs4s8zspqv7m5zvw9f874j4sqdiskvjn5wj2z";
         libName = "lava_test";
         authors = [
           "pleme-io"
@@ -517,12 +487,7 @@ rec {
         crateName = "lava-types";
         version = "0.1.2";
         edition = "2024";
-        workspace_member = null;
-        src = pkgs.fetchgit {
-          url = "https://github.com/pleme-io/lava-types";
-          rev = "1e2b9ee81e00140e12513ff3fad6f074549ec83a";
-          sha256 = "1ryg1csgdpla40kr1qvx41cvj00j9ya14nk3bq6nih1l8qn6pvii";
-        };
+        sha256 = "1bi09a9l0b10p8qf5xm1hkplsyfs0ni669rj1njd3v6dn3dfmvr4";
         libName = "lava_types";
         authors = [
           "pleme-io"
@@ -542,9 +507,9 @@ rec {
       };
       "memchr" = rec {
         crateName = "memchr";
-        version = "2.8.1";
+        version = "2.8.3";
         edition = "2021";
-        sha256 = "1n448jx01h5z2xknj6x2dhxgr8s8fb717cf6vfqj5lmhkpj7m53b";
+        sha256 = "161xa63ipfanf8v3nb82xd5hqgydv55nzw59wyngqbz6alfaz2yg";
         authors = [
           "Andrew Gallant <jamslam@gmail.com>"
           "bluss"
@@ -582,9 +547,9 @@ rec {
       };
       "quote" = rec {
         crateName = "quote";
-        version = "1.0.45";
+        version = "1.0.46";
         edition = "2021";
-        sha256 = "095rb5rg7pbnwdp6v8w5jw93wndwyijgci1b5lw8j1h5cscn3wj1";
+        sha256 = "0s034glrlav8nzqy2yskqzv52ncy82k126sm2jk5j1vs1iylbg6z";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -603,9 +568,9 @@ rec {
       };
       "regex" = rec {
         crateName = "regex";
-        version = "1.12.3";
+        version = "1.13.1";
         edition = "2021";
-        sha256 = "0xp2q0x7ybmpa5zlgaz00p8zswcirj9h8nry3rxxsdwi9fhm81z1";
+        sha256 = "1391a0a4100ik8cp7l577p3ip3haqq03rd9c5vdr7vcfdixj687h";
         authors = [
           "The Rust Project Developers"
           "Andrew Gallant <jamslam@gmail.com>"
@@ -661,9 +626,9 @@ rec {
       };
       "regex-automata" = rec {
         crateName = "regex-automata";
-        version = "0.4.14";
+        version = "0.4.16";
         edition = "2021";
-        sha256 = "13xf7hhn4qmgfh784llcp2kzrvljd13lb2b1ca0mwnf15w9d87bf";
+        sha256 = "1b8ihxq99g3hr8mr37bvhib4bfn8rlmpmp0wjg2q1j50plvdpkwg";
         libName = "regex_automata";
         authors = [
           "The Rust Project Developers"
@@ -722,9 +687,9 @@ rec {
       };
       "regex-syntax" = rec {
         crateName = "regex-syntax";
-        version = "0.8.10";
+        version = "0.8.11";
         edition = "2021";
-        sha256 = "02jx311ka0daxxc7v45ikzhcl3iydjbbb0mdrpc1xgg8v7c7v2fw";
+        sha256 = "1m25h5q2wp976fb9gc3dsc9l99svcvd5cri8lncb51c46ydgzxnn";
         libName = "regex_syntax";
         authors = [
           "The Rust Project Developers"
@@ -928,9 +893,9 @@ rec {
       };
       "syn" = rec {
         crateName = "syn";
-        version = "2.0.117";
+        version = "2.0.119";
         edition = "2021";
-        sha256 = "16cv7c0wbn8amxc54n4w15kxlx5ypdmla8s0gxr2l7bv7s0bhrg6";
+        sha256 = "15vjy620l91a3q4n4f4gzhnflmdr6pnm38v2m6cpk86i8av32a47";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -1029,9 +994,9 @@ rec {
       };
       "zmij" = rec {
         crateName = "zmij";
-        version = "1.0.21";
+        version = "1.0.23";
         edition = "2021";
-        sha256 = "1amb5i6gz7yjb0dnmz5y669674pqmwbj44p4yfxfv2ncgvk8x15q";
+        sha256 = "06zwri21nnrl34rwinmvbciap8yk1mrl8qfg9pff7lgspc56sri9";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
