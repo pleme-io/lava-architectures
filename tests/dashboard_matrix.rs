@@ -79,11 +79,22 @@ fn dashboards_dir() -> std::path::PathBuf {
 /// lava backend performs, reproduced here so the test exercises the real
 /// path rather than a pre-substituted fixture.
 fn bind(src: &str, params: &BTreeMap<&str, &str>) -> String {
-    let mut out = src.to_string();
+    // Mirrors the operator's `bind_params`, INCLUDING its `{{…}}` masking.
+    // A Grafana legend is `{{label}}`, and a param sharing a label's name
+    // must not be substituted inside one: naive replacement turns
+    // `{{namespace}}` into `{default}`, which surfaces as the evaluator's
+    // `unknown var "default"` rather than as a broken legend.
+    //
+    // This helper existing at all is the point — the test binds the way
+    // the operator binds, so a divergence here is a divergence the matrix
+    // can actually catch. It caught exactly this one.
+    const LB: &str = "\u{0}lava-lb\u{0}";
+    const RB: &str = "\u{0}lava-rb\u{0}";
+    let mut out = src.replace("{{", LB).replace("}}", RB);
     for (k, v) in params {
         out = out.replace(&format!("{{{k}}}"), v);
     }
-    out
+    out.replace(LB, "{{").replace(RB, "}}")
 }
 
 #[test]
@@ -115,7 +126,16 @@ fn every_catalogue_entry_renders_to_grafana_json() {
                 // check named five placeholders and went on passing when
                 // `logs_datasource` became the sixth, which is the exact
                 // failure the check exists to prevent, one level up.
-                let text = json.to_string();
+                // Mask `{{…}}` before scanning, for the same reason the
+                // binder does: a preserved Grafana legend `{{namespace}}`
+                // CONTAINS the literal `{namespace}`, so an unmasked scan
+                // reports a leak for a placeholder that was correctly left
+                // alone. The check and the binder have to agree on what a
+                // placeholder is, or one of them is always wrong.
+                let text = json
+                    .to_string()
+                    .replace("{{", "\u{0}L\u{0}")
+                    .replace("}}", "\u{0}R\u{0}");
                 let leaked: Vec<&str> = params
                     .keys()
                     .copied()
@@ -307,6 +327,37 @@ const PROVEN_SERIES: &[(&str, &str)] = &[
          metric-name check would fail them for the wrong reason",
     ),
 ];
+
+/// What camelot's own VictoriaMetrics actually held, 2026-08-11 23:40Z,
+/// queried through a port-forward to
+/// `vmsingle-lareira-vm-stack-victoria-metrics-k8s-stack` in `monitoring`.
+///
+/// Recorded because "the metric family exists" is NOT the property a board
+/// needs — it needs the series to exist for the namespace and job it
+/// queries — and checking the former while believing the latter is how a
+/// board ships that renders empty. Two of these were found exactly that
+/// way, after the boards were already written:
+///
+///   breathe_band_util_ratio                155 series
+///   breathe_band_dry_run                   172 series  (all ==1; ZERO ==0)
+///   kube_pod_info                         8071 series
+///   container_memory_working_set_bytes      604
+///   container_cpu_usage_seconds_total       604
+///   scrape_duration_seconds               3739
+///   scrape_samples_scraped                  59
+///   vector_component_errors_total            0   <-- DEPLOYED, UNSCRAPED
+///   vector_component_discarded_events_total  0   <-- same
+///   gateway_auth_total                       0   <-- no instrumentation
+///
+///   count by (namespace) (up):  monitoring 8, breathe-system 9, keda 6,
+///                               keda-http 2, camelot-nats 1, camelot 1
+///   count by (job) (up{job=~"auth|authcert|bis|uam|uamop|kfm|sdr|gator|logan"}):
+///                               ZERO ROWS — none of the nine akeyless
+///                               services is scraped at all.
+///
+/// This is a DATED SNAPSHOT and nothing re-takes it. Re-measure before
+/// acting on any figure here; do not infer today's state from it.
+const _CAMELOT_SERIES_CENSUS_2026_08_11: () = ();
 
 /// A rendered board must read a signal we have evidence something emits.
 #[test]

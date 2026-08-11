@@ -16,13 +16,44 @@
 ;;
 ;; Params:
 ;;   env         the cell, e.g. "camelot"
-;;   namespace   the namespace the observability plane runs in
+;;   namespace   the cell's PRIMARY workload namespace, e.g. "camelot"
 ;;   datasource  the metrics datasource uid
 ;;
 ;; The first panel is the one that matters most and is the one people
 ;; leave out: `up == 1` with a component's own series ABSENT is a broken
 ;; scrape, not a healthy component. TENDRIL names this as the first thing
 ;; an agent must check, precisely because it looks identical to health.
+;;
+;; ── The plane is NOT one namespace, measured 2026-08-11 on camelot ───────
+;; The first draft of this board scoped every panel to `namespace`, which
+;; would have made it useless exactly where it matters. Queried against
+;; camelot's own VictoriaMetrics:
+;;
+;;   count by (namespace) (up)  ->  monitoring 8, breathe-system 9,
+;;                                  keda 6, keda-http 2, camelot-nats 1,
+;;                                  camelot 1, (no namespace) 32
+;;
+;; So the observability plane lives in `monitoring`, the controllers it
+;; watches in `breathe-system`, and the cell's workloads in `camelot` —
+;; and a board scoped to any ONE of those reports on a seventh of the
+;; plane while looking complete. The liveness panels below are therefore
+;; fleet-wide, grouped BY namespace and job; only the workload-namespace
+;; panel uses `namespace`, and it says so in its title.
+;;
+;; ── And two things it must report are BROKEN on camelot right now ────────
+;; `up{namespace="camelot"}` returns ONE target — pangea-operator. None of
+;; the nine akeyless services (auth, authcert, bis, uam, uamop, kfm, sdr,
+;; gator, logan) is scraped: `count by (job) (up{job=~"auth|…|logan"})`
+;; returns zero rows.
+;;
+;; `vector_*` has ZERO series and `up{namespace="camelot-vector"}` has
+;; ZERO targets, while breathe holds a live `vector-memory` band in that
+;; namespace — so vector is DEPLOYED AND UNSCRAPED.
+;;
+;; That is the exact case this board exists to make visible, so the
+;; pipeline row below leads with an `absent()` panel rather than an error
+;; rate. An error rate alone would render empty and read as "no errors",
+;; when the truth is "nothing is watching".
 
 (deflava-dashboard nervous-system-self-health
   :uid "{env}-{board}"
@@ -73,28 +104,49 @@
                  :presence "conditional"))
       :thresholds ((:color "success") (:value 1 :color "danger")))))
 
-   (:title "subsystem liveness — derived, not listed"
+   (:title "coverage — WHAT is being scraped, fleet-wide"
     :panels
-    ((:id "up_by_job"
+    ((:id "targets_by_namespace"
+      :kind "timeseries"
+      :title "targets by namespace"
+      :unit "short"
+      :description "Scrape targets per namespace, across the WHOLE plane rather than one namespace. Measured on camelot: monitoring 8, breathe-system 9, keda 6, camelot 1. A board scoped to any single one of those would report on a seventh of the plane while looking complete."
+      :queries ((:ref "A"
+                 :expr "count by (namespace) (up)"
+                 :datasource "{datasource}"
+                 :legend "{{namespace}}")))
+
+     (:id "up_by_job"
       :kind "timeseries"
       :title "up by job"
       :unit "short"
-      :description "Every scraped job in {namespace}, discovered from the series rather than from an inventory somebody has to maintain. A new component appears here on its first scrape; a removed one disappears rather than leaving a green tile behind."
+      :description "Every scraped job, discovered from the series rather than from an inventory somebody maintains. A new component appears on its first scrape; a removed one disappears rather than leaving a green tile behind."
       :queries ((:ref "A"
-                 :expr "min by (job) (up{namespace=\"{namespace}\"})"
+                 :expr "min by (namespace, job) (up)"
                  :datasource "{datasource}"
-                 :legend "{{job}}"))
+                 :legend "{{namespace}}/{{job}}"))
       :thresholds ((:color "danger") (:value 1 :color "success")))
+
+     (:id "workload_targets"
+      :kind "stat"
+      :title "targets in {namespace}"
+      :unit "short"
+      :description "How many targets exist in the cell's OWN workload namespace — the one this board is instantiated for. On camelot this reads 1 (pangea-operator) against nine deployed akeyless services, which is the finding, not a rendering fault."
+      :queries ((:ref "A"
+                 :expr "count(up{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :instant #t))
+      :thresholds ((:color "danger") (:value 2 :color "warning") (:value 5 :color "success")))
 
      (:id "scrape_duration"
       :kind "timeseries"
       :title "scrape duration"
       :unit "s"
-      :description "How long each target takes to answer. A duration climbing toward the scrape interval is the warning before the timeout that turns into a gap you will later read as an outage."
+      :description "How long each target takes to answer. A duration climbing toward the scrape interval is the warning before the timeout that becomes a gap you later read as an outage."
       :queries ((:ref "A"
-                 :expr "max by (job) (scrape_duration_seconds{namespace=\"{namespace}\"})"
+                 :expr "max by (namespace, job) (scrape_duration_seconds)"
                  :datasource "{datasource}"
-                 :legend "{{job}}")))
+                 :legend "{{namespace}}/{{job}}")))
 
      (:id "series_scraped"
       :kind "timeseries"
@@ -102,19 +154,31 @@
       :unit "short"
       :description "Series count per target. A cliff here with up still at 1 is the broken-scrape case again — the target answers, and has stopped saying anything."
       :queries ((:ref "A"
-                 :expr "sum by (job) (scrape_samples_scraped{namespace=\"{namespace}\"})"
+                 :expr "sum by (namespace, job) (scrape_samples_scraped)"
                  :datasource "{datasource}"
-                 :legend "{{job}}")))))
+                 :legend "{{namespace}}/{{job}}")))))
 
-   (:title "pipeline — is the tap shedding load?"
+   (:title "pipeline — is the tap even watched?"
     :panels
-    ((:id "vector_errors"
+    ((:id "vector_unscraped"
+      :kind "stat"
+      :title "vector unscraped?"
+      :unit "short"
+      :description "1 when NO vector series exists anywhere. This panel leads the row because the two rows below cannot distinguish 'no errors' from 'nobody is looking' — both render empty. Measured on camelot 2026-08-11: vector_* has ZERO series while breathe holds a live vector-memory band in camelot-vector, i.e. vector is DEPLOYED AND UNSCRAPED. Fix the scrape, not the workload."
+      :queries ((:ref "A"
+                 :expr "absent(vector_component_errors_total)"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "vector_errors"
       :kind "timeseries"
       :title "vector component errors /s"
       :unit "short"
-      :description "Errors by vector component. This series does not exist until the first error, which is why it is event_driven: an empty panel here means no errors, never a broken query."
+      :description "Errors by vector component. Absent until the first error, hence event_driven — but read the panel to the left FIRST: empty here means 'no errors' only if vector is scraped at all."
       :queries ((:ref "A"
-                 :expr "sum by (component_id) (rate(vector_component_errors_total{namespace=\"{namespace}\"}[5m]))"
+                 :expr "sum by (component_id) (rate(vector_component_errors_total[5m]))"
                  :datasource "{datasource}"
                  :legend "{{component_id}}"
                  :presence "event_driven"))
@@ -124,9 +188,9 @@
       :kind "timeseries"
       :title "discarded events /s"
       :unit "short"
-      :description "Events vector dropped rather than delivered — the tap shedding load. Also event_driven, and also absent until the first drop."
+      :description "Events vector dropped rather than delivered — the tap shedding load. Same caveat as the panel beside it."
       :queries ((:ref "A"
-                 :expr "sum by (component_id) (rate(vector_component_discarded_events_total{namespace=\"{namespace}\"}[5m]))"
+                 :expr "sum by (component_id) (rate(vector_component_discarded_events_total[5m]))"
                  :datasource "{datasource}"
                  :legend "{{component_id}}"
                  :presence "event_driven"))
