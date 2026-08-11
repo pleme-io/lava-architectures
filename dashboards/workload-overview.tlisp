@@ -1,0 +1,86 @@
+;; workload-overview — presence, restarts and OOM kills for one service.
+;;
+;; The catalogue entry the operator resolves for
+;; `spec.source.architecture.name = "workload-overview"`. Parameters are
+;; bound as {placeholders}; every one is a scalar, because a structured
+;; param would have to be spliced into this source as text and that is
+;; not the document the author wrote.
+;;
+;; Params:
+;;   env         the cell, e.g. "camelot"      -> uid/title
+;;   service     the service name, e.g. "auth"
+;;   job         the Prometheus job label
+;;   namespace   the namespace the pods run in
+;;   datasource  the metrics datasource uid, e.g. "mimir"
+;;
+;; Every panel here reads a series the SCRAPER emits (up,
+;; kube_pod_container_status_*), never one the application has to
+;; declare. That is deliberate: 4 of the 6 akeyless microservices expose
+;; no domain metric at all, so a board built on application series would
+;; render empty for most of the fleet. A board that is honest about
+;; presence beats one that is aspirational about latency.
+
+(deflava-dashboard workload-overview
+  :uid "{env}-{service}-overview"
+  :title "{env} · {service}"
+  :description "Presence and defect signals for {service}. Presence, not health — a green board here means the process is reporting, not that it is correct."
+  :tags ("workload" "{env}")
+  :refresh "30s"
+  :timezone "utc"
+  :time (:from "now-6h" :to "now")
+
+  :datasources ((:uid "{datasource}" :type "prometheus" :lang "promql"))
+
+  :rows
+  ((:title "presence"
+    :panels
+    ((:id "up"
+      :kind "stat"
+      :title "{service} up"
+      :unit "short"
+      :description "0 means {service} is not reporting on job={job}. This is presence, not health: a process can report while serving errors."
+      :queries ((:ref "A"
+                 :expr "min(up{job=\"{job}\",namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :instant #t))
+      ;; Liveness ramps the wrong way round — LOWER is worse — so the
+      ;; base band is the danger colour and the good band sits above it.
+      :thresholds ((:color "danger") (:value 1 :color "success")))
+
+     (:id "scrape_absent"
+      :kind "stat"
+      :title "scrape present?"
+      :unit "short"
+      :description "1 when the target series is absent entirely. up==1 with the series missing is a BROKEN SCRAPE, not a healthy workload — the case a plain up check cannot see."
+      :queries ((:ref "A"
+                 :expr "absent(up{job=\"{job}\",namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))))
+
+   (:title "defects"
+    :panels
+    ((:id "restarts"
+      :kind "timeseries"
+      :title "restarts /1h"
+      :unit "short"
+      :description "Container restarts for {service} in the last hour."
+      :queries ((:ref "A"
+                 :expr "increase(kube_pod_container_status_restarts_total{namespace=\"{namespace}\",pod=~\"{service}.*\"}[1h])"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :presence "event_driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 3 :color "danger")))
+
+     (:id "oomkilled"
+      :kind "timeseries"
+      :title "OOMKilled"
+      :unit "short"
+      :description "A {service} pod was terminated by the OOM killer — raise the memory limit or find the leak."
+      :queries ((:ref "A"
+                 :expr "kube_pod_container_status_last_terminated_reason{namespace=\"{namespace}\",reason=\"OOMKilled\",pod=~\"{service}.*\"}"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :presence "event_driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))))))
