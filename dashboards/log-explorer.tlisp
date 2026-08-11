@@ -1,0 +1,86 @@
+;; log-explorer — the general drill-down over a cell's log streams.
+;;
+;; Replaces Ruby's LogExplorerDashboard. Its `cascade:` parameter was an
+;; ARRAY (`[app, pod]`), which the scalar binding refuses — so the cascade
+;; is fixed here rather than passed. That is the correct place for it: a
+;; cascade is the SHAPE of the drill-down, and shape belongs to the
+;; architecture. What varies per cell is which namespace you start in, and
+;; that is a scalar.
+;;
+;; Params:
+;;   env              the cell, e.g. "camelot"
+;;   namespace        the namespace to scope to
+;;   logs_datasource  the LOGS datasource uid (vlogs)
+;;
+;; The drill-down is namespace -> app -> pod, each level a query variable
+;; whose options are discovered from the store. A query variable is
+;; honest here in a way it would not be in audit-explorer: these are
+;; VictoriaLogs stream labels, which the shipper sets on every line, not
+;; a field somebody hopes is parsed out of the message.
+
+(deflava-dashboard log-explorer
+  :uid "{env}-{board}"
+  :title "{env} · log explorer"
+  :description "Drill from namespace to app to pod across {env}'s log streams. Volume first so you can see whether a silence is real, then the lines."
+  :tags ("logs" "platform" "{env}")
+  :refresh "1m"
+  :timezone "utc"
+  :time (:from "now-1h" :to "now")
+
+  :datasources ((:uid "{logs_datasource}" :type "victoriametrics-logs-datasource" :lang "logsql"))
+
+  :variables ((:name "search" :kind "textbox" :label "search")
+              (:name "app" :kind "query" :label "app"
+               :datasource "{logs_datasource}"
+               :query "label_values(app)"
+               :multi #t
+               :include-all #t)
+              (:name "pod" :kind "query" :label "pod"
+               :datasource "{logs_datasource}"
+               :query "label_values(pod)"
+               :multi #t
+               :include-all #t))
+
+  :rows
+  ((:title "volume — is the silence real?"
+    :panels
+    ((:id "line_volume"
+      :kind "timeseries"
+      :title "lines"
+      :unit "short"
+      :description "Line count over time for the current scope. Read this BEFORE concluding anything from an empty log table: a stream that stopped arriving and a workload that stopped talking look identical in the table and completely different here."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search | stats count() lines"
+                 :datasource "{logs_datasource}")))
+
+     (:id "error_volume"
+      :kind "timeseries"
+      :title "error lines"
+      :unit "short"
+      :description "Error-class lines over the same scope and window. Its shape against the panel beside it is the whole question: a flat total with a rising error line is a workload degrading, both rising together is usually just more traffic."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic) | stats count() errors"
+                 :datasource "{logs_datasource}"
+                 :presence "event_driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 10 :color "danger")))))
+
+   (:title "logs"
+    :panels
+    ((:id "all_lines"
+      :kind "table"
+      :title "all lines"
+      :description "Full context for the current scope. Narrow with the app and pod variables above rather than by editing the query — the variables are stream labels the shipper sets, so they always match."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search"
+                 :datasource "{logs_datasource}"
+                 :instant #t)))
+
+     (:id "error_lines"
+      :kind "table"
+      :title "ERROR lines"
+      :description "Error-class only — the triage window. Empty means no errors."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic)"
+                 :datasource "{logs_datasource}"
+                 :instant #t
+                 :presence "event_driven")))))))

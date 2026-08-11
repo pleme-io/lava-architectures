@@ -25,17 +25,50 @@ const DASHBOARD_DIR: &str = "dashboards";
 /// here is invisible to the matrix, and `every_catalogue_file_has_a_row`
 /// below is what makes that impossible rather than merely discouraged.
 fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
-    vec![(
-        "workload-overview",
-        BTreeMap::from([
-            ("env", "camelot"),
-            ("service", "auth"),
-            ("job", "auth"),
-            ("namespace", "default"),
-            ("datasource", "mimir"),
-            ("logs_datasource", "vlogs"),
-        ]),
-    )]
+    vec![
+        (
+            "workload-overview",
+            BTreeMap::from([
+                ("env", "camelot"),
+                ("service", "auth"),
+                ("job", "auth"),
+                ("namespace", "default"),
+                ("datasource", "mimir"),
+                ("logs_datasource", "vlogs"),
+            ]),
+        ),
+        (
+            "homeostasis-control",
+            BTreeMap::from([("env", "camelot"), ("board", "homeostasis-control"), ("datasource", "mimir")]),
+        ),
+        (
+            "nervous-system-self-health",
+            BTreeMap::from([
+                ("env", "camelot"),
+                ("board", "nervous-system-self-health"),
+                ("namespace", "default"),
+                ("datasource", "mimir"),
+            ]),
+        ),
+        (
+            "audit-explorer",
+            BTreeMap::from([
+                ("env", "camelot"),
+                ("board", "audit-explorer"),
+                ("namespace", "default"),
+                ("datasource", "vlogs"),
+            ]),
+        ),
+        (
+            "log-explorer",
+            BTreeMap::from([
+                ("env", "camelot"),
+                ("board", "log-explorer"),
+                ("namespace", "default"),
+                ("logs_datasource", "vlogs"),
+            ]),
+        ),
+    ]
 }
 
 fn dashboards_dir() -> std::path::PathBuf {
@@ -217,25 +250,100 @@ fn declared_datasources_and_query_references_agree() {
     }
 }
 
-/// A rendered board must read a series something actually emits.
+/// Signal families we have EVIDENCE are emitted, each carrying its evidence.
 ///
-/// Measured 2026-08-11: 4 of the 6 akeyless microservices expose no
-/// domain metric at all, so a board built on application series renders
-/// empty for most of the fleet. Every catalogue entry therefore keys on
-/// scraper/kube-state series, and this asserts it rather than trusting
-/// the author to remember.
+/// The point of the second column is that it exists. A board reading a
+/// series nothing produces renders perfectly, ships, and shows an empty
+/// panel an operator reads as "nothing wrong" — the most expensive
+/// failure a dashboard has, because it is indistinguishable from health.
+/// Requiring a written justification per family is what stops the list
+/// growing by assumption: you cannot add a row without saying where you
+/// checked.
+///
+/// This replaced a two-prefix hand-list (`up{` or `kube_pod_container_status`)
+/// that was correct for the one entry it was written against and failed
+/// the four added after it — for the wrong reason, since those read real
+/// series it simply did not name. Same drift class as the placeholder
+/// check above.
+///
+/// Measured 2026-08-11 and the reason this table is not longer: the
+/// akeyless gateway metric family (`gateway_auth_total` and friends, which
+/// SecretsPlatformOverview / AuthMethodHealth / SecurityPostureBoard are
+/// built on) returns an EMPTY series on akeyless's own Datadog over a 2h
+/// window. Those three boards are therefore NOT in the catalogue — porting
+/// them faithfully would ship exactly the empty-panel failure above, three
+/// times over, on a board whose whole job is to say whether security is OK.
+const PROVEN_SERIES: &[(&str, &str)] = &[
+    (
+        "up{",
+        "the scraper's own liveness series; exists wherever a target is scraped at all",
+    ),
+    (
+        "scrape_",
+        "scrape_duration_seconds / scrape_samples_scraped — same origin as `up`",
+    ),
+    (
+        "kube_pod_",
+        "kube-state-metrics; deployed cluster-wide, independent of workload instrumentation",
+    ),
+    (
+        "container_",
+        "container_cpu_usage_seconds_total / container_memory_working_set_bytes, from \
+         cAdvisor inside the kubelet — present on any node, no workload opt-in",
+    ),
+    (
+        "breathe_band_",
+        "registered by our own controller — breathe-runtime/src/lib.rs `metrics_for`, \
+         with the label set (dim, namespace, name) read from the same function",
+    ),
+    (
+        "vector_component_",
+        "vector's own component metrics; absent until the first error/drop, which is why \
+         every panel using them is marked event_driven",
+    ),
+    (
+        "{namespace=",
+        "a VictoriaLogs stream selector. LogsQL boards read no metric at all, so a \
+         metric-name check would fail them for the wrong reason",
+    ),
+];
+
+/// A rendered board must read a signal we have evidence something emits.
 #[test]
-fn catalogue_entries_read_series_the_scraper_emits() {
+fn catalogue_entries_read_signals_with_evidence() {
     let dir = dashboards_dir();
     for (name, params) in catalogue() {
         let raw = std::fs::read_to_string(dir.join(format!("{name}.tlisp"))).unwrap();
         let json = render_dashboard_grafana_json(&bind(&raw, &params), &Theme::tundra())
             .unwrap_or_else(|e| panic!("{name}: {e}"));
         let text = json.to_string();
+        let matched = PROVEN_SERIES
+            .iter()
+            .any(|(prefix, _)| text.contains(prefix));
         assert!(
-            text.contains("up{") || text.contains("kube_pod_container_status"),
-            "{name} reads no scraper-emitted series — it will render empty on a service \
-             with no application metrics"
+            matched,
+            "{name} reads no signal family with recorded evidence of being emitted. \
+             Either it will render empty, or PROVEN_SERIES is missing a family — and \
+             adding one there requires saying WHERE you checked, not merely that you \
+             did. Known families: {:?}",
+            PROVEN_SERIES.iter().map(|(p, _)| *p).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// Every family in the evidence table must carry non-trivial evidence.
+///
+/// Without this, the table degrades into the hand-list it replaced: a
+/// future prefix added with `""` or `"todo"` in the second column reads as
+/// justified at a glance and is not.
+#[test]
+fn every_proven_series_family_states_its_evidence() {
+    assert!(!PROVEN_SERIES.is_empty(), "the evidence table is empty");
+    for (prefix, evidence) in PROVEN_SERIES {
+        assert!(
+            evidence.len() > 30,
+            "{prefix:?} is listed with no real evidence ({evidence:?}) — say where you \
+             checked that something emits it"
         );
     }
 }

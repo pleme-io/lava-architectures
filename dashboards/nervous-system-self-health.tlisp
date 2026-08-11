@@ -1,0 +1,133 @@
+;; nervous-system-self-health — is the observability plane itself alive?
+;;
+;; Replaces Ruby's NervousSystemSelfHealthBoard, and does NOT reproduce its
+;; interface. That board took `subsystems:` and `stages:` — hand-written
+;; lists of "which jobs make up the plane" — and camelot supplied neither,
+;; so it rendered with its liveness row and its pipeline row both skipped.
+;; A self-health board that is empty because nobody filled in its inventory
+;; is worse than absent: it occupies the slot where the real one would go.
+;;
+;; So the inventory is DERIVED. `up` grouped by job discovers the plane
+;; from what is actually being scraped, which means a component added to
+;; the namespace appears here without anyone remembering to list it — and,
+;; more importantly, a component that VANISHES from the scrape config
+;; stops appearing, instead of leaving a hand-written tile that quietly
+;; reads green because the query still matches nothing.
+;;
+;; Params:
+;;   env         the cell, e.g. "camelot"
+;;   namespace   the namespace the observability plane runs in
+;;   datasource  the metrics datasource uid
+;;
+;; The first panel is the one that matters most and is the one people
+;; leave out: `up == 1` with a component's own series ABSENT is a broken
+;; scrape, not a healthy component. TENDRIL names this as the first thing
+;; an agent must check, precisely because it looks identical to health.
+
+(deflava-dashboard nervous-system-self-health
+  :uid "{env}-{board}"
+  :title "{env} · nervous system (self-health)"
+  :description "The observability plane watching itself. Subsystems are derived from the up series rather than listed, so this board cannot go stale against the scrape config."
+  :tags ("observability" "platform" "{env}")
+  :refresh "30s"
+  :timezone "utc"
+  :time (:from "now-6h" :to "now")
+
+  :datasources ((:uid "{datasource}" :type "prometheus" :lang "promql"))
+
+  :rows
+  ((:title "status — is the plane reporting?"
+    :panels
+    ((:id "targets_down"
+      :kind "stat"
+      :title "targets down"
+      :unit "short"
+      :description "Scrape targets in {namespace} reporting up==0. The plane cannot tell you about a workload while it cannot tell you about itself."
+      :queries ((:ref "A"
+                 :expr "count(up{namespace=\"{namespace}\"} == 0)"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "targets_total"
+      :kind "stat"
+      :title "targets scraped"
+      :unit "short"
+      :description "The DENOMINATOR, and the reason it is on this row rather than buried. Every count beside it is meaningless without this one: zero targets scraped renders as zero targets down, which reads exactly like a healthy plane."
+      :queries ((:ref "A"
+                 :expr "count(up{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :instant #t))
+      :thresholds ((:color "danger") (:value 1 :color "success")))
+
+     (:id "scrape_absent"
+      :kind "stat"
+      :title "scrape present?"
+      :unit "short"
+      :description "1 when the up series for this namespace is absent ENTIRELY — no targets, no error, nothing. This is the failure a targets-down count structurally cannot show, because with no series there is nothing to count as down."
+      :queries ((:ref "A"
+                 :expr "absent(up{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))))
+
+   (:title "subsystem liveness — derived, not listed"
+    :panels
+    ((:id "up_by_job"
+      :kind "timeseries"
+      :title "up by job"
+      :unit "short"
+      :description "Every scraped job in {namespace}, discovered from the series rather than from an inventory somebody has to maintain. A new component appears here on its first scrape; a removed one disappears rather than leaving a green tile behind."
+      :queries ((:ref "A"
+                 :expr "min by (job) (up{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{job}}"))
+      :thresholds ((:color "danger") (:value 1 :color "success")))
+
+     (:id "scrape_duration"
+      :kind "timeseries"
+      :title "scrape duration"
+      :unit "s"
+      :description "How long each target takes to answer. A duration climbing toward the scrape interval is the warning before the timeout that turns into a gap you will later read as an outage."
+      :queries ((:ref "A"
+                 :expr "max by (job) (scrape_duration_seconds{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{job}}")))
+
+     (:id "series_scraped"
+      :kind "timeseries"
+      :title "samples per scrape"
+      :unit "short"
+      :description "Series count per target. A cliff here with up still at 1 is the broken-scrape case again — the target answers, and has stopped saying anything."
+      :queries ((:ref "A"
+                 :expr "sum by (job) (scrape_samples_scraped{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{job}}")))))
+
+   (:title "pipeline — is the tap shedding load?"
+    :panels
+    ((:id "vector_errors"
+      :kind "timeseries"
+      :title "vector component errors /s"
+      :unit "short"
+      :description "Errors by vector component. This series does not exist until the first error, which is why it is event_driven: an empty panel here means no errors, never a broken query."
+      :queries ((:ref "A"
+                 :expr "sum by (component_id) (rate(vector_component_errors_total{namespace=\"{namespace}\"}[5m]))"
+                 :datasource "{datasource}"
+                 :legend "{{component_id}}"
+                 :presence "event_driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "vector_discarded"
+      :kind "timeseries"
+      :title "discarded events /s"
+      :unit "short"
+      :description "Events vector dropped rather than delivered — the tap shedding load. Also event_driven, and also absent until the first drop."
+      :queries ((:ref "A"
+                 :expr "sum by (component_id) (rate(vector_component_discarded_events_total{namespace=\"{namespace}\"}[5m]))"
+                 :datasource "{datasource}"
+                 :legend "{{component_id}}"
+                 :presence "event_driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))))))

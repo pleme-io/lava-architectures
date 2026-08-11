@@ -1,0 +1,161 @@
+;; homeostasis-control — the breathe control board.
+;;
+;; Replaces Ruby's HomeostasisControlBoard. This is the one platform board
+;; that ports almost faithfully, and the reason is worth stating: every
+;; series it reads is emitted by OUR OWN controller, so the metric names
+;; and their label set are checkable rather than assumed. Verified against
+;; breathe-runtime/src/lib.rs `metrics_for`, which registers each gauge
+;; with exactly `(dim, namespace, name)` — no `job`, no `pod`, no `cell`.
+;; A `by (job)` clause here would silently collapse every band into one
+;; series.
+;;
+;; Params:
+;;   env         the cell, e.g. "camelot"
+;;   datasource  the metrics datasource uid
+;;
+;; NOT params, deliberately: the metric names. Ruby took seven of them
+;; (`util_metric:`, `setpoint_metric:`, …) so a consumer could repoint the
+;; board at a differently-named exporter. Nothing ever did, and a
+;; mistyped override renders an empty panel that looks like a calm
+;; system — the worst failure mode a control board has. They are literals
+;; here; repointing is an edit to this file, where the change is visible.
+;;
+;; Defects first. An operator lands on "is anything wrong?" before any
+;; line chart, because the line charts are only readable once you know
+;; whether to be worried.
+
+(deflava-dashboard homeostasis-control
+  :uid "{env}-{board}"
+  :title "{env} · homeostasis (breathe)"
+  :description "breathe's own control loop: which bands are shadowed, which are pinned at ceiling, and whether the observations driving them are fresh. Reads breathe_band_* only — no cAdvisor, no kube-state."
+  :tags ("breathe" "platform" "{env}")
+  :refresh "30s"
+  :timezone "utc"
+  :time (:from "now-6h" :to "now")
+
+  :datasources ((:uid "{datasource}" :type "prometheus" :lang "promql"))
+
+  :rows
+  ((:title "status — bands needing attention"
+    :panels
+    ((:id "at_ceiling"
+      :kind "stat"
+      :title "bands at ceiling"
+      :unit "short"
+      :description "A band whose utilization is above its grow-above threshold while its limit already equals its ceiling. It WANTS to grow and cannot — the defect breathe exists to surface, and the one a utilization chart alone never shows."
+      :queries ((:ref "A"
+                 :expr "count((breathe_band_util_ratio > on (dim, namespace, name) breathe_band_grow_above_ratio) and on (dim, namespace, name) (breathe_band_current_limit >= breathe_band_ceiling))"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 3 :color "danger")))
+
+     (:id "stale_observations"
+      :kind "stat"
+      :title "stale observations"
+      :unit "short"
+      :description "Bands whose newest observation is older than 300s. A stale band is not a calm band: the loop is deciding on data it should no longer trust, and its util panel keeps drawing the last good value."
+      :queries ((:ref "A"
+                 :expr "count(breathe_band_staleness_seconds >= 300)"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 5 :color "danger")))
+
+     (:id "band_count"
+      :kind "stat"
+      :title "bands enrolled"
+      :unit "short"
+      :description "The denominator for every count on this row. Zero here means breathe is not reporting at all, which reads as 'no defects' on every other panel — check this first."
+      :queries ((:ref "A"
+                 :expr "count(breathe_band_setpoint_ratio)"
+                 :datasource "{datasource}"
+                 :instant #t))
+      ;; Inverted ramp: zero enrolled bands is the alarming value here,
+      ;; because it is what makes the rest of the row lie.
+      :thresholds ((:color "danger") (:value 1 :color "success")))))
+
+   (:title "posture — shadow vs live"
+    :panels
+    ((:id "shadow_bands"
+      :kind "stat"
+      :title "shadowed"
+      :unit "short"
+      :description "Bands computing a decision and not writing it. Shadow is a legitimate steady state (observe / calibrate), not a fault — read it against the live count beside it."
+      :queries ((:ref "A"
+                 :expr "count(breathe_band_dry_run == 1)"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional")))
+
+     (:id "live_bands"
+      :kind "stat"
+      :title "live"
+      :unit "short"
+      :description "Bands actually writing limits. The pair with `shadowed` is the fleet posture in one glance."
+      :queries ((:ref "A"
+                 :expr "count(breathe_band_dry_run == 0)"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional")))
+
+     (:id "cooldown"
+      :kind "timeseries"
+      :title "cooldown remaining"
+      :unit "s"
+      :description "Seconds until each band may act again. A band flat at its cooldown ceiling is flapping and being held back — the shape to look for is a sawtooth, not a plateau."
+      :queries ((:ref "A"
+                 :expr "breathe_band_cooldown_remaining_seconds > 0"
+                 :datasource "{datasource}"
+                 :legend "{{namespace}}/{{name}} ({{dim}})"
+                 :presence "event_driven")))))
+
+   (:title "band shape — util inside the green band"
+    :panels
+    ((:id "util_ratio"
+      :kind "timeseries"
+      :title "utilization"
+      :unit "percentunit"
+      :description "The live signal driving every decision. Read it against the setpoint and grow-above series below: util oscillating between them is breathe working, util pinned above them is the at-ceiling defect."
+      :queries ((:ref "A"
+                 :expr "breathe_band_util_ratio"
+                 :datasource "{datasource}"
+                 :legend "{{namespace}}/{{name}} ({{dim}})")))
+
+     (:id "setpoint"
+      :kind "timeseries"
+      :title "setpoint / grow-above"
+      :unit "percentunit"
+      :description "The band breathe is steering into. These are configuration, not measurement — a step here is somebody changing the target, and every util shift after it is explained by that step."
+      :queries ((:ref "A"
+                 :expr "breathe_band_setpoint_ratio"
+                 :datasource "{datasource}"
+                 :legend "setpoint {{namespace}}/{{name}}")
+                (:ref "B"
+                 :expr "breathe_band_grow_above_ratio"
+                 :datasource "{datasource}"
+                 :legend "grow-above {{namespace}}/{{name}}")))
+
+     (:id "limit_vs_ceiling"
+      :kind "timeseries"
+      :title "carved limit vs ceiling"
+      :unit "bytes"
+      :description "What breathe actually wrote, against the hard bound it may not cross. The two lines meeting is the at-ceiling defect above, seen over time instead of as a count."
+      :queries ((:ref "A"
+                 :expr "breathe_band_current_limit"
+                 :datasource "{datasource}"
+                 :legend "limit {{namespace}}/{{name}}")
+                (:ref "B"
+                 :expr "breathe_band_ceiling"
+                 :datasource "{datasource}"
+                 :legend "ceiling {{namespace}}/{{name}}")))
+
+     (:id "staleness"
+      :kind "timeseries"
+      :title "observation staleness"
+      :unit "s"
+      :description "Age of the newest observation per band. Rising staleness with flat utilization is the signature of a dead metrics path, not a quiet workload."
+      :queries ((:ref "A"
+                 :expr "breathe_band_staleness_seconds"
+                 :datasource "{datasource}"
+                 :legend "{{namespace}}/{{name}} ({{dim}})")))))))

@@ -1,0 +1,95 @@
+;; audit-explorer — the append-only audit stream, who · what · when · result.
+;;
+;; Replaces Ruby's AuditExplorer. Reads LogsQL against VictoriaLogs, which
+;; is why this one ports while the three gateway-metric boards do not: the
+;; log stream exists and carries real lines today, where
+;; `gateway_auth_total` and its family return no series at all.
+;;
+;; Params:
+;;   env         the cell, e.g. "camelot"
+;;   namespace   the namespace whose stream to read
+;;   datasource  the LOGS datasource uid (vlogs)
+;;
+;; The stream selector is composed here from `namespace`, never passed in.
+;; Ruby took `stream: '{namespace="camelot"}'` as a parameter, and that
+;; value carries double quotes — bound textually into a tlisp string
+;; literal it closes the literal early and evaluates a different document
+;; that still parses. Composing from a quote-free `namespace` removes the
+;; whole class rather than escaping around it.
+;;
+;; `$search` scopes the board. It is a textbox rather than a query
+;; variable on purpose: a query variable would need a label the shipper is
+;; known to emit, and inventing one renders an empty dropdown that looks
+;; like "no values" instead of "wrong label".
+
+(deflava-dashboard audit-explorer
+  :uid "{env}-{board}"
+  :title "{env} · audit explorer"
+  :description "The audit stream for {namespace}: failure mix first, then the events, then the raw window. Type in $search to scope every panel at once."
+  :tags ("audit" "security" "{env}")
+  :refresh "1m"
+  :timezone "utc"
+  :time (:from "now-6h" :to "now")
+
+  :datasources ((:uid "{datasource}" :type "victoriametrics-logs-datasource" :lang "logsql"))
+
+  :variables ((:name "search" :kind "textbox" :label "search"))
+
+  :rows
+  ((:title "status — success / fail mix"
+    :panels
+    ((:id "audit_failures"
+      :kind "stat"
+      :title "failed audit events"
+      :unit "short"
+      :description "Audit lines whose outcome is a failure, in the window. Empty is GOOD — no failures — which is why this is event_driven and must never be read as a broken query."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (result:fail OR result:denied OR result:error) | stats count() failures"
+                 :datasource "{datasource}"
+                 :presence "event_driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 10 :color "danger")))
+
+     (:id "audit_total"
+      :kind "stat"
+      :title "audit events"
+      :unit "short"
+      :description "The DENOMINATOR. A failure count of zero means nothing until you know this is non-zero — an audit stream that stopped arriving reads as a perfectly clean one."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search | stats count() events"
+                 :datasource "{datasource}"))
+      ;; Inverted: no audit events at all is the alarming state here.
+      :thresholds ((:color "danger") (:value 1 :color "success")))))
+
+   (:title "events — who · what · when · result"
+    :panels
+    ((:id "audit_events"
+      :kind "table"
+      :title "audit events"
+      :description "The scoped audit stream, newest first. This is the panel an assessor reads; everything above it exists to tell you whether to trust it."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search"
+                 :datasource "{datasource}"
+                 :instant #t)))))
+
+   (:title "logs — raw windows"
+    :panels
+    ((:id "audit_error_window"
+      :kind "table"
+      :title "ERROR window"
+      :description "Error-class lines only — the fast-triage view. Empty means no errors."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic)"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "event_driven")))
+
+     (:id "audit_error_rate"
+      :kind "stat"
+      :title "error lines"
+      :unit "short"
+      :description "Count of error-class lines in the window. Green = none."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic) | stats count() errors"
+                 :datasource "{datasource}"
+                 :presence "event_driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 5 :color "danger")))))))
