@@ -7,11 +7,22 @@
 ;; not the document the author wrote.
 ;;
 ;; Params:
-;;   env         the cell, e.g. "camelot"      -> uid/title
-;;   service     the service name, e.g. "auth"
-;;   job         the Prometheus job label
-;;   namespace   the namespace the pods run in
-;;   datasource  the metrics datasource uid, e.g. "mimir"
+;;   env              the cell, e.g. "camelot"      -> uid/title
+;;   service          the service name, e.g. "auth"
+;;   job              the Prometheus job label
+;;   namespace        the namespace the pods run in
+;;   datasource       the metrics datasource uid, e.g. "mimir"
+;;   logs_datasource  the logs datasource uid, e.g. "vlogs"
+;;
+;; NOT a param: the LogsQL stream selector. The Ruby board took one
+;; (`stream:`), and the camelot chart passed `{namespace="camelot"}` --
+;; a value containing double quotes. Scalar binding is textual, so that
+;; value spliced into a tlisp string literal TERMINATES the literal and
+;; the document stops being the one the author wrote. The selector is
+;; therefore composed here from `namespace`, which is quote-free by
+;; construction. This is the general rule, not a workaround for one
+;; field: a param whose value can carry the delimiter of the syntax it
+;; lands in belongs in the architecture, not in the CR.
 ;;
 ;; Every panel here reads a series the SCRAPER emits (up,
 ;; kube_pod_container_status_*), never one the application has to
@@ -29,7 +40,8 @@
   :timezone "utc"
   :time (:from "now-6h" :to "now")
 
-  :datasources ((:uid "{datasource}" :type "prometheus" :lang "promql"))
+  :datasources ((:uid "{datasource}" :type "prometheus" :lang "promql")
+                (:uid "{logs_datasource}" :type "victoriametrics-logs-datasource" :lang "logsql"))
 
   :rows
   ((:title "presence"
@@ -83,4 +95,83 @@
                  :datasource "{datasource}"
                  :legend "{{pod}}"
                  :presence "event_driven"))
-      :thresholds ((:color "success") (:value 1 :color "danger")))))))
+      :thresholds ((:color "success") (:value 1 :color "danger")))))
+
+   ;; ── resources ───────────────────────────────────────────────────────
+   ;; Every selector here is scoped `pod=~"{service}.*"`, and that is a
+   ;; DELIBERATE DIVERGENCE from the Ruby board this replaces, not an
+   ;; oversight. Ruby's KubernetesPodPanels builds its selector from
+   ;; `namespace:` alone unless given a deployment or pod regex, and the
+   ;; camelot chart gave neither -- so all nine per-service boards showed
+   ;; the SAME namespace-wide CPU and memory, on a board titled after one
+   ;; service. A per-service board that answers a namespace-wide question
+   ;; is worse than no panel: it reads as evidence about the service.
+   (:title "resources"
+    :panels
+    ((:id "pod_count"
+      :kind "stat"
+      :title "pods"
+      :unit "short"
+      :description "How many {service} pods kube-state currently knows about."
+      :queries ((:ref "A"
+                 :expr "count(kube_pod_info{namespace=\"{namespace}\",pod=~\"{service}.*\"})"
+                 :datasource "{datasource}"
+                 :instant #t)))
+
+     (:id "pod_cpu"
+      :kind "timeseries"
+      :title "pod CPU"
+      :unit "percent"
+      :description "Per-pod CPU for {service}, from cAdvisor."
+      :queries ((:ref "A"
+                 :expr "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"{namespace}\",pod=~\"{service}.*\"}[5m])) * 100"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}")))
+
+     (:id "pod_memory"
+      :kind "timeseries"
+      :title "pod memory"
+      :unit "bytes"
+      :description "Per-pod working-set memory for {service}. Read this next to the OOMKilled panel above."
+      :queries ((:ref "A"
+                 :expr "sum by (pod) (container_memory_working_set_bytes{namespace=\"{namespace}\",pod=~\"{service}.*\"})"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}")))))
+
+   ;; ── logs ────────────────────────────────────────────────────────────
+   ;; LogsQL against VictoriaLogs. The stream is namespace-scoped, exactly
+   ;; as the Ruby board's was -- narrowing it to the service would need a
+   ;; per-line label the shipper is not known to emit, and a selector
+   ;; invented here renders an empty panel that looks like "no errors".
+   ;; Widen-and-say-so beats narrow-and-be-wrong.
+   (:title "logs"
+    :panels
+    ((:id "logs_all"
+      :kind "table"
+      :title "{service} logs (namespace stream)"
+      :description "Every line on the {namespace} stream -- full context. Not filtered to {service}; use the ERROR window below for triage."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"}"
+                 :datasource "{logs_datasource}"
+                 :instant #t)))
+
+     (:id "logs_errors"
+      :kind "table"
+      :title "{service} — ERROR logs"
+      :description "Error-class lines only. Empty is GOOD -- it means no errors, not a broken panel, which is why this query is event_driven."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} level:error OR level:fatal OR level:critical OR level:panic"
+                 :datasource "{logs_datasource}"
+                 :instant #t
+                 :presence "event_driven")))
+
+     (:id "logs_error_rate"
+      :kind "stat"
+      :title "error log lines"
+      :unit "short"
+      :description "Count of error-class lines in the window. Green = none."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} level:error OR level:fatal OR level:critical OR level:panic | stats count() errors"
+                 :datasource "{logs_datasource}"
+                 :presence "event_driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 5 :color "danger")))))))

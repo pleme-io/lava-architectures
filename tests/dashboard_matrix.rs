@@ -33,6 +33,7 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
             ("job", "auth"),
             ("namespace", "default"),
             ("datasource", "mimir"),
+            ("logs_datasource", "vlogs"),
         ]),
     )]
 }
@@ -75,14 +76,22 @@ fn every_catalogue_entry_renders_to_grafana_json() {
                 // An unbound placeholder is the failure this catches: it
                 // renders perfectly and ships a literal `{service}` into
                 // a live dashboard title.
+                //
+                // DERIVED from the row's own params, never hand-listed.
+                // A hand-list drifts the moment a param is added: this
+                // check named five placeholders and went on passing when
+                // `logs_datasource` became the sixth, which is the exact
+                // failure the check exists to prevent, one level up.
                 let text = json.to_string();
-                if text.contains("{env}")
-                    || text.contains("{service}")
-                    || text.contains("{namespace}")
-                    || text.contains("{datasource}")
-                    || text.contains("{job}")
-                {
-                    failures.push(format!("{name}: an unbound placeholder reached the output"));
+                let leaked: Vec<&str> = params
+                    .keys()
+                    .copied()
+                    .filter(|k| text.contains(&format!("{{{k}}}")))
+                    .collect();
+                if !leaked.is_empty() {
+                    failures.push(format!(
+                        "{name}: unbound placeholder(s) reached the output: {leaked:?}"
+                    ));
                 }
             }
             Err(e) => failures.push(format!("{name}: {e}")),
@@ -125,6 +134,87 @@ fn every_catalogue_file_has_a_row() {
         missing.is_empty(),
         "catalogue files with no matrix row: {missing:?} (add them to catalogue() in this file)"
     );
+}
+
+/// Every datasource a board declares must be used by some panel query,
+/// and every query must name a datasource the board declared.
+///
+/// This is the well-formedness half of the quote-injection hazard
+/// documented in `workload-overview.tlisp`. Scalar param binding is
+/// TEXTUAL: a value carrying the delimiter of the syntax it lands in —
+/// a double quote inside a tlisp string literal — silently ends the
+/// literal early, and what comes out is a different document that still
+/// parses. The visible symptom is a query pointing at a datasource that
+/// was never declared, or a declared datasource nothing references.
+///
+/// It is a real hazard, not a hypothetical: camelot's chart passes
+/// `logsStream: '{namespace="camelot"}'`, and binding that as a param
+/// would have done exactly this.
+#[test]
+fn declared_datasources_and_query_references_agree() {
+    let dir = dashboards_dir();
+    for (name, params) in catalogue() {
+        let raw = std::fs::read_to_string(dir.join(format!("{name}.tlisp"))).unwrap();
+        let json = render_dashboard_grafana_json(&bind(&raw, &params), &Theme::tundra())
+            .unwrap_or_else(|e| panic!("{name}: {e}"));
+
+        // Grafana nests a collapsed row's children under `row.panels`, so
+        // walk instead of assuming one flat list.
+        let mut used: std::collections::BTreeSet<String> = Default::default();
+        let mut queries = 0usize;
+        fn walk(
+            v: &serde_json::Value,
+            used: &mut std::collections::BTreeSet<String>,
+            queries: &mut usize,
+        ) {
+            match v {
+                serde_json::Value::Object(m) => {
+                    if let Some(targets) = m.get("targets").and_then(|t| t.as_array()) {
+                        for t in targets {
+                            *queries += 1;
+                            if let Some(uid) =
+                                t.pointer("/datasource/uid").and_then(|u| u.as_str())
+                            {
+                                used.insert(uid.to_string());
+                            }
+                        }
+                    }
+                    for x in m.values() {
+                        walk(x, used, queries);
+                    }
+                }
+                serde_json::Value::Array(a) => {
+                    for x in a {
+                        walk(x, used, queries);
+                    }
+                }
+                _ => {}
+            }
+        }
+        walk(&json, &mut used, &mut queries);
+
+        // Carry the denominator: a walk that found nothing would satisfy
+        // every set comparison below and prove exactly nothing.
+        assert!(
+            queries > 0,
+            "{name}: walked the rendered board and found 0 queries — this check would pass vacuously"
+        );
+
+        let declared: std::collections::BTreeSet<String> = params
+            .iter()
+            .filter(|(k, _)| k.ends_with("datasource"))
+            .map(|(_, v)| (*v).to_string())
+            .collect();
+        assert!(
+            !declared.is_empty(),
+            "{name}: no *datasource param in the matrix row — nothing to compare"
+        );
+        assert_eq!(
+            used, declared,
+            "{name}: panels reference {used:?} but the row binds {declared:?} — a query is \
+             pointing at a datasource nobody declared, or a declared one is unreferenced"
+        );
+    }
 }
 
 /// A rendered board must read a series something actually emits.
