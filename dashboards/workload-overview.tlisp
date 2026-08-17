@@ -82,7 +82,7 @@
                  :expr "increase(kube_pod_container_status_restarts_total{namespace=\"{namespace}\",pod=~\"{service}.*\"}[1h])"
                  :datasource "{datasource}"
                  :legend "{{pod}}"
-                 :presence "event_driven"))
+                 :presence "event-driven"))
       :thresholds ((:color "success") (:value 1 :color "warning") (:value 3 :color "danger")))
 
      (:id "oomkilled"
@@ -94,7 +94,7 @@
                  :expr "kube_pod_container_status_last_terminated_reason{namespace=\"{namespace}\",reason=\"OOMKilled\",pod=~\"{service}.*\"}"
                  :datasource "{datasource}"
                  :legend "{{pod}}"
-                 :presence "event_driven"))
+                 :presence "event-driven"))
       :thresholds ((:color "success") (:value 1 :color "danger")))))
 
    ;; ── resources ───────────────────────────────────────────────────────
@@ -163,7 +163,7 @@
                  :expr "{namespace=\"{namespace}\"} level:error OR level:fatal OR level:critical OR level:panic"
                  :datasource "{logs_datasource}"
                  :instant #t
-                 :presence "event_driven")))
+                 :presence "event-driven")))
 
      (:id "logs_error_rate"
       :kind "stat"
@@ -173,5 +173,5 @@
       :queries ((:ref "A"
                  :expr "{namespace=\"{namespace}\"} level:error OR level:fatal OR level:critical OR level:panic | stats count() errors"
                  :datasource "{logs_datasource}"
-                 :presence "event_driven"))
+                 :presence "event-driven"))
       :thresholds ((:color "success") (:value 1 :color "warning") (:value 5 :color "danger")))))))

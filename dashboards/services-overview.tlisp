@@ -1,0 +1,463 @@
+;; services-overview — the MESH-WIDE answer: is anything down right now?
+;;
+;; The bundle's nine per-service boards each answer "is auth up?" and
+;; nothing answers "is anything down?" across the whole application. That
+;; question was only ever answered inside gamewarden-nervous-system's
+;; `status` row, which is being dropped with the rest of the
+;; our-control-plane material. Dropping it without rehoming it is the
+;; single largest regression available in this refactor, so its three
+;; expressions are carried forward VERBATIM in the `now` row below:
+;;
+;;   count(up{namespace="{namespace}"} == 0)   -> "Services NOT Reporting" A
+;;   count(up{namespace="{namespace}"})        -> "Services Reporting"     B
+;;   absent(up{namespace="{namespace}"})       -> "Services NOT Reporting" B
+;;
+;; They are paired two-to-a-tile rather than spread over three, because
+;; the house style fixes this row at exactly six tiles and because the
+;; pairing is the CORRECT one: each pair shares a threshold ramp. Tile 1
+;; holds the two signals where LOWER is worse (reporting, scraped); tile 2
+;; holds the two where HIGHER is worse (not reporting, no series at all).
+;; A three-tile split would have put an inverted ramp on a shared band.
+;;
+;; The scope change from the board it rehomes is deliberate and is the
+;; whole point: nervous-system-self-health is fleet-wide by design (it
+;; watches the observability plane, which lives across `monitoring`,
+;; `breathe-system`, `keda` and more). This board is namespace-scoped to
+;; the APPLICATION. A query that ranges over all namespaces silently
+;; becomes a platform board wearing an application title — the exact
+;; defect in tenant-workloads, whose $namespace defaults to $__all.
+;;
+;; Params CONSUMED (derived by `required_dashboard_params`, never
+;; hand-listed):
+;;   namespace   the application namespace, e.g. "akeyless"
+;;   datasource  the metrics datasource uid, e.g. "mimir"
+;;
+;; Params NOT consumed, and why — read before adding a matrix row:
+;;   env              the title is a fixed literal. The naming rule is
+;;                    that the tenant/boundary never appears in a title:
+;;                    it is the folder plus the namespace param. So there
+;;                    is nothing for {env} to interpolate into, and
+;;                    binding it is harmless but pointless.
+;;   logs_datasource  MUST NOT be bound in the matrix row.
+;;                    `declared_datasources_and_query_references_agree`
+;;                    derives its expected set from every `*datasource`
+;;                    param and asserts SET EQUALITY against the
+;;                    datasources panels actually query. This board is
+;;                    metric-only — every row it is specified to carry
+;;                    (now / health / scheduling / ranked) reads metrics —
+;;                    so declaring a logs datasource nothing queries would
+;;                    fail that check. The log drill-down is log-explorer's
+;;                    job and lives beside this board in the same folder.
+;;
+;; ── Why there is not one application metric on this board ───────────────
+;; The akeyless application metric family (`gateway_auth_total` and its
+;; siblings) returns ZERO SERIES. Re-measured 2026-08-17 over a fresh 2h
+;; window on Akeyless's own Datadog, and consistent with the 2026-08-11
+;; camelot census recorded in tests/dashboard_matrix.rs. workload-overview's
+;; own header states that 4 of the 6 akeyless microservices expose no
+;; domain metric at all.
+;;
+;; So every panel here reads a series the SCRAPER emits — `up`,
+;; `kube_pod_*`, `kube_deployment_*`, `container_*` — and none reads a
+;; series the application has to declare. A board built on app-internal
+;; counters would render empty, and an empty board reads as "nothing is
+;; wrong", which is the most expensive way a dashboard can be wrong.
+;;
+;; ── :presence is spelled with a HYPHEN, and the siblings are wrong ──────
+;; `lava_eval::dashboard::panel_from` matches exactly two spellings —
+;; "event-driven" and "conditional" (lava-eval/src/dashboard.rs:291-295) —
+;; and falls through to `Presence::Continuous` for anything else. All five
+;; existing boards in this directory write `:presence "event-driven"` with
+;; an UNDERSCORE, so every one of those annotations is currently silently
+;; typed Continuous. Nothing catches it: `Presence` is not emitted into the
+;; Grafana JSON at all (lava-core/src/dashboard/render.rs's `JTarget` has no
+;; presence field), so the render is byte-identical either way and the
+;; matrix cannot see the difference.
+;;
+;; This board writes the spelling the evaluator accepts. Matching the five
+;; siblings would mean knowingly authoring the value that means the
+;; opposite of what is intended. The siblings need the same one-character
+;; fix; that is a separate change and is reported, not smuggled in here.
+;;
+;; ── The note panel is degraded, and it is degraded ON PURPOSE ───────────
+;; `PanelKind::Text` exists (lava-core/src/dashboard.rs:162) and renders as
+;; Grafana `"type": "text"`, but the renderer emits no `options.content`
+;; for it — the model carries no content field at all — so a text panel's
+;; BODY is empty in the browser. Its `description` is emitted and reachable
+;; through the panel's info icon, so the note lives there and the title
+;; says so out loud rather than leaving a reader staring at an empty box.
+;;
+;; And `Dashboard::validate` refuses ANY panel with zero queries
+;; (lava-core/src/dashboard.rs:538, `PanelWithoutQuery`) — text panels are
+;; not exempt. Hence the inert hidden `vector(1)` target below: a Grafana
+;; text panel ignores its targets entirely, so the query has no effect
+;; beyond satisfying the validator. Adding `:content` to the model is the
+;; real fix and is reported.
+;;
+;; ── One operational caveat, stated where a chart cannot state it ────────
+;; `up` counts SCRAPE TARGETS, not services. A deployment with three
+;; replicas and a ServiceMonitor is three targets; a deployment with NO
+;; ServiceMonitor is zero targets — invisible to the first two tiles while
+;; still appearing in every kube_* panel below it. Measured on camelot
+;; 2026-08-11: `count by (job) (up{job=~"auth|authcert|bis|uam|uamop|kfm|
+;; sdr|gator|logan"})` returned ZERO ROWS — none of the nine akeyless
+;; services was scraped at all, so `count(up{namespace="camelot"})` read 1
+;; (pangea-operator) against nine deployed services. That is why the
+;; denominator sits on tile 1 next to the live count instead of being left
+;; for the reader to infer: without it, zero-scraped and all-healthy are
+;; the same picture.
+;;
+;; ── Which kube-state families are measured, and which are inferred ──────
+;; MEASURED 2026-08-11 on camelot's own VictoriaMetrics: `kube_pod_info`
+;; 8071 series, `container_memory_working_set_bytes` 604,
+;; `container_cpu_usage_seconds_total` 604. kube-state-metrics is
+;; unambiguously up and cAdvisor is unambiguously scraped.
+;;
+;; NOT individually measured: `kube_deployment_*`,
+;; `kube_horizontalpodautoscaler_*`, `kube_job_*`,
+;; `kube_pod_status_unschedulable`, `kube_pod_status_reason`,
+;; `kube_pod_container_status_waiting_reason`. All come from the SAME
+;; kube-state-metrics exporter with default collectors, so the inference is
+;; a strong one — but it is an inference, and a panel of theirs rendering
+;; empty may mean "collector disabled" rather than "zero". Every one of
+;; them is therefore marked `:presence "conditional"` and the note panel
+;; says so. Do not paper over their empty state with `or vector(0)`: that
+;; converts "not collected" into a confident green zero, which is the
+;; failure this whole board is shaped to avoid.
+;;
+;; ── Cardinality is bounded on every multi-series panel ──────────────────
+;; top-20 on every by-pod / by-service timeseries, top-15 on every ranking,
+;; uniformly and without exception. A namespace-scoped board looks small
+;; today and a rollout changes that silently.
+
+(deflava-dashboard services-overview
+  :uid "akl-tenant-services"
+  :title "Akeyless - Tenant Services Overview"
+  :description "The mesh-wide answer: is anything down right now, across the whole application namespace. Built entirely on scraper-emitted signals (up, kube_*, container_*) because the akeyless application metric family returns zero series — re-measured 2026-08-17. Nothing here watches the hosting platform."
+  :tags ("akeyless" "tenant" "services")
+  :refresh "30s"
+  :timezone "utc"
+  :time (:from "now-6h" :to "now")
+
+  :datasources ((:uid "{datasource}" :type "prometheus" :lang "promql"))
+
+  :rows
+  (;; ── note ─────────────────────────────────────────────────────────────
+
+   ;; ── now ──────────────────────────────────────────────────────────────
+   ;; Exactly six scalar tiles, and they lead the board. Status counters
+   ;; first, saturation last: saturation is the explanation, never the
+   ;; headline. Each tile is width 4 so all six land on ONE grid row —
+   ;; the default stat width is 6, which would wrap them 4 + 2 and break
+   ;; the one-glance read this row exists for.
+   (:title "now — is anything down right now?"
+    :panels
+    ((:id "services_reporting"
+      :kind "stat"
+      :title "Services Reporting"
+      :unit "short"
+      :width 4
+      :description "Scrape targets answering (up == 1), shown against the total number of targets scraped. Two series on one tile because they share a ramp and because neither means anything alone: zero-scraped renders as zero-down, which reads exactly like a healthy namespace. Targets, not services — a deployment with no ServiceMonitor contributes nothing here."
+      :queries ((:ref "A"
+                 :expr "count(up{namespace=\"{namespace}\"} == 1)"
+                 :datasource "{datasource}"
+                 :legend "reporting"
+                 :instant #t
+                 :presence "conditional")
+                (:ref "B"
+                 :expr "count(up{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "scraped"
+                 :instant #t))
+      ;; Liveness ramps the wrong way — LOWER is worse — so the base band
+      ;; is the danger colour and the good band sits above it.
+      :thresholds ((:color "danger") (:value 1 :color "success")))
+
+     (:id "services_not_reporting"
+      :kind "stat"
+      :title "Services NOT Reporting"
+      :unit "short"
+      :width 4
+      :description "Targets answering up == 0, carried forward verbatim from the nervous-system status row. The second series is absent(up) — 1 exactly when the up series for this namespace does not exist AT ALL, which is the failure a down-count structurally cannot show: with no series there is nothing to count as down. Both signals ramp the same way, which is why they share a tile."
+      :queries ((:ref "A"
+                 :expr "count(up{namespace=\"{namespace}\"} == 0)"
+                 :datasource "{datasource}"
+                 :legend "not reporting"
+                 :instant #t
+                 :presence "conditional")
+                (:ref "B"
+                 :expr "absent(up{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "no series at all"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "unavailable_replicas"
+      :kind "stat"
+      :title "Unavailable Replicas"
+      :unit "short"
+      :width 4
+      :description "Replicas the namespace's deployments want and do not have. This is the tile that answers the board's title question for workloads that are not scraped at all — kube-state-metrics sees every deployment whether or not anyone instruments it. Empty here means the kube_deployment_* collector is not reporting, NOT zero."
+      :queries ((:ref "A"
+                 :expr "sum(kube_deployment_status_replicas_unavailable{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "unavailable"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 3 :color "danger")))
+
+     (:id "restarts_1h"
+      :kind "stat"
+      :title "Restarts (1h)"
+      :unit "short"
+      :width 4
+      :description "Container restarts across the whole namespace in the last hour. event-driven: empty is GOOD here, it means nothing restarted."
+      :queries ((:ref "A"
+                 :expr "sum(increase(kube_pod_container_status_restarts_total{namespace=\"{namespace}\"}[1h]))"
+                 :datasource "{datasource}"
+                 :legend "restarts"
+                 :instant #t
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 5 :color "danger")))
+
+     (:id "oomkilled_1h"
+      :kind "stat"
+      :title "OOMKilled (1h)"
+      :unit "short"
+      :width 4
+      :description "Containers whose LAST termination was an OOM kill, seen in the last hour. Read the qualifier literally: kube_pod_container_status_last_terminated_reason is a persistent gauge describing the most recent termination, so a container killed two hours ago and not restarted since still counts here. It is a standing condition, not a rate. Pair it with the memory ranking below."
+      :queries ((:ref "A"
+                 :expr "sum(max_over_time(kube_pod_container_status_last_terminated_reason{namespace=\"{namespace}\",reason=\"OOMKilled\"}[1h]))"
+                 :datasource "{datasource}"
+                 :legend "oomkilled"
+                 :instant #t
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "pods_running"
+      :kind "stat"
+      :title "Pods Running"
+      :unit "short"
+      :width 4
+      :description "Pods in phase Running. The population denominator for every panel below — a health row over zero pods is green and meaningless, so this tile ramps the same way the reporting tile does."
+      :queries ((:ref "A"
+                 :expr "count(kube_pod_status_phase{namespace=\"{namespace}\",phase=\"Running\"} == 1)"
+                 :datasource "{datasource}"
+                 :legend "running"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "danger") (:value 1 :color "success")))))
+
+   ;; ── health ───────────────────────────────────────────────────────────
+   ;; What the six tiles above compress, expanded over time and split by
+   ;; the dimension you would ask for next. Lines throughout: every signal
+   ;; in this row is a gauge, and a bar chart of a gauge invents a shape
+   ;; that is not in the data.
+   (:title "health — pod phase, readiness and unavailable replicas by service"
+    :panels
+    ((:id "pods_by_phase"
+      :kind "timeseries"
+      :title "Pod Count by Phase"
+      :unit "short"
+      :width 12
+      :description "Every pod in the namespace, split by lifecycle phase. Pending climbing while Running is flat is a scheduling problem and the scheduling row below is where it resolves; Failed climbing is a workload problem and the ranked row is. Naturally bounded at five series, so no topk is needed and none is applied — the bound is a property of the label, not a choice."
+      :queries ((:ref "A"
+                 :expr "sum by (phase) (kube_pod_status_phase{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{phase}}"
+                 :presence "conditional")))
+
+     (:id "pods_not_ready"
+      :kind "timeseries"
+      :title "Not-Ready Pods by Pod (top 20)"
+      :unit "short"
+      :width 12
+      :description "Pods whose Ready condition is false. A pod can sit here indefinitely while its phase stays Running, which is why this panel exists next to the phase split rather than inside it — Running-and-not-Ready is the shape of a failing readiness probe, and phase alone cannot show it. conditional: empty means every pod is ready."
+      :queries ((:ref "A"
+                 :expr "topk(20, kube_pod_status_ready{namespace=\"{namespace}\",condition=\"false\"} == 1)"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :presence "conditional")))
+
+     (:id "unavailable_by_service"
+      :kind "timeseries"
+      :title "Unavailable Replicas by Service (top 20)"
+      :unit "short"
+      :width 12
+      :description "Which deployment is short of replicas, over time. This is the by-service view of the Unavailable Replicas tile, and it is the panel that names the culprit — the tile only says that there is one. conditional: empty means every deployment is at strength."
+      :queries ((:ref "A"
+                 :expr "topk(20, kube_deployment_status_replicas_unavailable{namespace=\"{namespace}\"} > 0)"
+                 :datasource "{datasource}"
+                 :legend "{{deployment}}"
+                 :presence "conditional")))
+
+     (:id "desired_vs_available"
+      :kind "timeseries"
+      :title "Replicas Desired vs Available (namespace total)"
+      :unit "short"
+      :width 12
+      :description "The paired signal on one panel, never two: the gap between the lines IS the finding, and two panels side by side ask the reader to compute it from two y-axes. Both lines falling together is a deliberate scale-down; only the lower line falling is an outage."
+      :queries ((:ref "A"
+                 :expr "sum(kube_deployment_spec_replicas{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "desired"
+                 :presence "conditional")
+                (:ref "B"
+                 :expr "sum(kube_deployment_status_replicas_available{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "available"
+                 :presence "conditional")))
+
+     (:id "containers_waiting_reason"
+      :kind "timeseries"
+      :title "Waiting Containers by Reason (top 20)"
+      :unit "short"
+      :width 24
+      :description "CrashLoopBackOff, ImagePullBackOff, CreateContainerConfigError and the rest, by reason. Full width because the reason string is the whole diagnosis and a narrow legend truncates it. This is the single highest-yield panel on the board for the question in its title: a container stuck waiting is down, is not restarting, and shows up in neither the restart counter nor the up series."
+      :queries ((:ref "A"
+                 :expr "topk(20, sum by (reason) (kube_pod_container_status_waiting_reason{namespace=\"{namespace}\"} > 0))"
+                 :datasource "{datasource}"
+                 :legend "{{reason}}"
+                 :presence "conditional")))))
+
+   ;; ── scheduling ───────────────────────────────────────────────────────
+   ;; Rehomed from tenant-cluster-health.json. That board's Nodes row is
+   ;; correctly being lost — it watches the hosting platform, which is not
+   ;; ours — but its HPA, Evicted and Unschedulable panels are all
+   ;; namespace-scopable, and they are the visual counterpart of alert
+   ;; rules we are keeping. An alert with no panel behind it is an alert
+   ;; nobody can triage. Every selector here carries namespace="{namespace}";
+   ;; the originals did not, which is what made them platform panels.
+   (:title "scheduling — unschedulable, evicted, autoscaling and job failures"
+    :panels
+    ((:id "unschedulable_pods"
+      :kind "timeseries"
+      :title "Unschedulable Pods by Pod (top 20)"
+      :unit "short"
+      :width 12
+      :description "Pods the scheduler cannot place. Namespace-scoped, which changes what the panel MEANS versus the cluster-health original: this is no longer 'the cluster is full', it is 'this application cannot be placed' — the cause may still be cluster capacity, but the cause is the platform's to fix and the symptom is ours to see. conditional: empty means everything placed."
+      :queries ((:ref "A"
+                 :expr "topk(20, kube_pod_status_unschedulable{namespace=\"{namespace}\"} > 0)"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :presence "conditional")))
+
+     (:id "evicted_pods"
+      :kind "timeseries"
+      :title "Evicted Pods by Pod (top 20)"
+      :unit "short"
+      :width 12
+      :description "Pods evicted by the kubelet, usually under node memory or disk pressure. event-driven: empty is GOOD and is the normal state. An eviction that coincides with an OOMKilled count above is the same incident seen from two sides — the pod lost, and the node is why."
+      :queries ((:ref "A"
+                 :expr "topk(20, kube_pod_status_reason{namespace=\"{namespace}\",reason=\"Evicted\"} > 0)"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :presence "event-driven")))
+
+     (:id "hpa_current_vs_max"
+      :kind "timeseries"
+      :title "HPA Replicas Current vs Max (top 20)"
+      :unit "short"
+      :width 12
+      :description "Paired on one panel because the question is never 'how many replicas' but 'how much headroom is left'. Current pinned to max is an autoscaler that has run out of room and is now silently shedding load — it reports Ready, it reports up == 1, and it is failing. Nothing else on this board can show that."
+      :queries ((:ref "A"
+                 :expr "topk(20, kube_horizontalpodautoscaler_status_current_replicas{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{horizontalpodautoscaler}} current"
+                 :presence "conditional")
+                (:ref "B"
+                 :expr "topk(20, kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{horizontalpodautoscaler}} max"
+                 :presence "conditional")))
+
+     (:id "job_failures"
+      :kind "timeseries"
+      :title "Failed Jobs by Job (top 20)"
+      :unit "short"
+      :width 12
+      :description "Failed pods per Job in the namespace — migrations, backups, one-shot bootstrap work. These fail without touching any deployment, any up series or any restart counter, so a board with no job panel reports a clean namespace through a failed migration. event-driven: empty is GOOD."
+      :queries ((:ref "A"
+                 :expr "topk(20, kube_job_status_failed{namespace=\"{namespace}\"} > 0)"
+                 :datasource "{datasource}"
+                 :legend "{{job_name}}"
+                 :presence "event-driven")))))
+
+   ;; ── ranked ───────────────────────────────────────────────────────────
+   ;; The bundle being replaced carries ZERO ranking widgets across its 173
+   ;; panels (counted during the refactor survey, not re-counted here),
+   ;; which means every "which one is it?" question costs the reader a scan
+   ;; of a legend. Every table here sorts by the BAD column descending, so
+   ;; the broken thing is row 1 and no scanning happens.
+   ;;
+   ;; KNOWN LIMIT, stated rather than worked around: the DSL has no
+   ;; transformation surface, so the three replica columns cannot be joined
+   ;; into one wide table. They arrive as three frames on one panel and
+   ;; Grafana shows a frame selector. Query A is the unavailable column and
+   ;; is what the panel opens on, which is the ordering that matters.
+   ;; Adding a `:transformations` clause is the real fix.
+   (:title "ranked — worst first"
+    :panels
+    ((:id "replicas_table"
+      :kind "table"
+      :title "Replicas Desired / Available / Unavailable by Service (sorted by unavailable)"
+      :unit "short"
+      :width 24
+      :height 10
+      :description "Sorted by UNAVAILABLE descending, so the broken deployment is row 1 without the reader scanning. Three frames, not three columns — the DSL has no join transformation, so use the frame selector for the desired and available columns; A (unavailable) is the one the panel opens on and is the one the sort is about. conditional throughout: an empty A frame means every deployment is at strength."
+      :queries ((:ref "A"
+                 :expr "sort_desc(kube_deployment_status_replicas_unavailable{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{deployment}}"
+                 :instant #t
+                 :presence "conditional")
+                (:ref "B"
+                 :expr "sort_desc(kube_deployment_spec_replicas{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{deployment}}"
+                 :instant #t
+                 :presence "conditional")
+                (:ref "C"
+                 :expr "sort_desc(kube_deployment_status_replicas_available{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :legend "{{deployment}}"
+                 :instant #t
+                 :presence "conditional")))
+
+     (:id "top_cpu"
+      :kind "table"
+      :title "Top Pods by CPU (cores, top 15)"
+      :unit "short"
+      :width 8
+      :description "BY POD, and the title says so, because cAdvisor emits no deployment or service label — deriving one from a pod-name regex would be a guess that breaks on StatefulSets and DaemonSets, and a title claiming a grouping its query does not apply is the exact drift defect this refactor is removing. The pod name carries the deployment prefix, which is enough to read the ranking by service. Cores, not percent: percent of what is a per-node question and this board has no node scope."
+      :queries ((:ref "A"
+                 :expr "topk(15, sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"{namespace}\",container!=\"\"}[5m])))"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :instant #t)))
+
+     (:id "top_memory"
+      :kind "table"
+      :title "Top Pods by Memory (working set, top 15)"
+      :unit "bytes"
+      :width 8
+      :description "Working set, which is what the OOM killer actually reads — RSS and cache totals both mislead here. Read row 1 against the OOMKilled tile: a pod at the top of this table with an OOM kill above it is the leak, and a pod with an OOM kill but no place in this table was killed by a limit too tight rather than by growth. Same by-pod caveat as the CPU ranking."
+      :queries ((:ref "A"
+                 :expr "topk(15, sum by (pod) (container_memory_working_set_bytes{namespace=\"{namespace}\",container!=\"\"}))"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :instant #t)))
+
+     (:id "top_restarts"
+      :kind "table"
+      :title "Top Pods by Restarts (1h, top 15)"
+      :unit "short"
+      :width 8
+      :description "increase() over the hour, so this is restarts IN the window rather than the lifetime counter — a pod that crashed forty times last week and has been stable since does not appear, which is the whole point of ranking on it. event-driven: an empty table means nothing restarted."
+      :queries ((:ref "A"
+                 :expr "topk(15, sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"{namespace}\"}[1h])))"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :instant #t
+                 :presence "event-driven")))))))

@@ -31,6 +31,8 @@
 
 #![allow(clippy::module_name_repetitions)]
 
+use std::collections::{BTreeMap, BTreeSet};
+
 pub use lava_core::{Architecture, ResourceRef, Value};
 pub use lava_eval::{
     eval_architecture, eval_architecture_with_schema, interfaces_in_source, parse, Atom,
@@ -134,6 +136,241 @@ pub fn load_bundled(
     let src = std::fs::read_to_string(&path)
         .map_err(|e| EvalError::NotArchForm(format!("io: {} — {e}", path.display())))?;
     eval_architecture(&src, bindings)
+}
+
+// ── dashboard parameterization ──────────────────────────────────────────
+//
+// A `(deflava-dashboard …)` source is parameterized by `{name}`
+// placeholders that are bound TEXTUALLY before evaluation. That binding
+// used to exist in exactly one place — a private `bind` helper inside
+// `tests/dashboard_matrix.rs` — which was fine while the matrix was the
+// only caller. It stopped being fine the moment `src/bin/render.rs`
+// needed the same substitution: two copies of a textual binder are two
+// copies free to disagree, and the disagreement would surface as the
+// matrix passing on a document the CLI does not produce.
+//
+// So the binder lives here, and both the matrix and the CLI call it.
+// What the matrix was written to catch is unchanged: it mirrors the
+// pangea-operator Ruby `bind_params`, which is EXTERNAL to this crate and
+// therefore still an independent implementation to diverge from.
+
+/// Built-in path for the bundled `.tlisp` dashboards, relative to the
+/// crate root. Sibling of [`ARCHITECTURE_DIR`]; separate because a
+/// dashboard renders a Grafana document, not terraform.json.
+pub const DASHBOARD_DIR: &str = "dashboards";
+
+/// Sentinels used to hide Grafana's `{{label}}` legend syntax from the
+/// placeholder machinery. `\0` cannot occur in a `.tlisp` source, so the
+/// mask is unambiguous.
+const LEGEND_LB: &str = "\u{0}lava-lb\u{0}";
+const LEGEND_RB: &str = "\u{0}lava-rb\u{0}";
+
+/// Hide `{{…}}` so a param sharing a Grafana label's name is not
+/// substituted inside a legend.
+///
+/// Without this, `{{namespace}}` binds to `{default}` — which surfaces as
+/// the evaluator's `unknown var "default"` rather than as the broken
+/// legend it actually is, sending the reader to the wrong file.
+fn mask_legends(src: &str) -> String {
+    src.replace("{{", LEGEND_LB).replace("}}", LEGEND_RB)
+}
+
+fn unmask_legends(src: &str) -> String {
+    src.replace(LEGEND_LB, "{{").replace(LEGEND_RB, "}}")
+}
+
+/// Drop `;`-to-end-of-line comments, respecting string literals.
+///
+/// String-aware on purpose. lava's own lexer only treats `;` as a comment
+/// outside a `"…"` literal (`lava_eval`'s `Parser::skip`), and a naive
+/// stripper would truncate any description containing a semicolon. That
+/// is not cosmetic here: [`required_dashboard_params`] reads the stripped
+/// source, so a truncated description silently drops whatever
+/// placeholders followed the `;` from the required set — and a required
+/// param that the CLI never asks for is exactly the unbound-placeholder
+/// leak the CLI exists to prevent, reintroduced by its own preflight.
+fn strip_comments(src: &str) -> String {
+    let mut out = String::with_capacity(src.len());
+    let mut chars = src.chars();
+    let mut in_string = false;
+    let mut escaped = false;
+    while let Some(c) = chars.next() {
+        if in_string {
+            out.push(c);
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == '"' {
+                in_string = false;
+            }
+        } else if c == '"' {
+            in_string = true;
+            out.push(c);
+        } else if c == ';' {
+            // Consume to end of line, keeping the newline so line-based
+            // reasoning about the stripped source still lines up.
+            for c2 in chars.by_ref() {
+                if c2 == '\n' {
+                    out.push('\n');
+                    break;
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// Collect every `{identifier}` span in already-legend-masked text.
+///
+/// The grammar is deliberately narrow — `[A-Za-z_][A-Za-z0-9_]*` — because
+/// a brace in one of these documents is far more often NOT a placeholder:
+/// `{namespace=\"camelot\"}` is a LogsQL stream selector and `up{job=…}`
+/// is a PromQL matcher. Both are rejected by the grammar (they carry `=`
+/// and quotes), so a scan for "any `{`" would report a leak on every
+/// correctly-rendered board and get switched off within a week.
+fn scan_placeholders(masked: &str, out: &mut BTreeSet<String>) {
+    let b = masked.as_bytes();
+    let mut i = 0;
+    while i < b.len() {
+        // ASCII `{` cannot appear inside a multi-byte UTF-8 sequence, and
+        // the run below only advances over ASCII, so the slice at the end
+        // is always on a char boundary.
+        if b[i] == b'{' {
+            let start = i + 1;
+            let mut j = start;
+            if j < b.len() && (b[j].is_ascii_alphabetic() || b[j] == b'_') {
+                j += 1;
+                while j < b.len() && (b[j].is_ascii_alphanumeric() || b[j] == b'_') {
+                    j += 1;
+                }
+                if j < b.len() && b[j] == b'}' {
+                    out.insert(masked[start..j].to_string());
+                    i = j + 1;
+                    continue;
+                }
+            }
+        }
+        i += 1;
+    }
+}
+
+/// Every parameter a dashboard source requires, derived from the source
+/// itself.
+///
+/// Derived, never hand-listed. A hand-list drifts the moment a param is
+/// added — which already happened once in this crate, when the matrix's
+/// leak check named five placeholders and went on passing after
+/// `logs_datasource` became the sixth.
+///
+/// Comments are stripped first: `workload-overview.tlisp`'s header says
+/// "bound as {placeholders}" in prose, and demanding a `placeholders`
+/// param would make the preflight refuse a document that is entirely
+/// correct.
+#[must_use]
+pub fn required_dashboard_params(src: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    scan_placeholders(&mask_legends(&strip_comments(src)), &mut out);
+    out
+}
+
+/// Bind `{key}` placeholders in a dashboard source.
+///
+/// Scalar and textual, matching pangea-operator's `bind_params`. Textual
+/// binding is why a param whose value can carry the delimiter of the
+/// syntax it lands in — a double quote inside a tlisp string literal —
+/// must not be a param at all; see `workload-overview.tlisp`'s header.
+#[must_use]
+pub fn bind_dashboard_params<K, V>(src: &str, params: &BTreeMap<K, V>) -> String
+where
+    K: AsRef<str>,
+    V: AsRef<str>,
+{
+    let mut out = mask_legends(src);
+    for (k, v) in params {
+        let k = k.as_ref();
+        let mut needle = String::with_capacity(k.len() + 2);
+        needle.push('{');
+        needle.push_str(k);
+        needle.push('}');
+        out = out.replace(&needle, v.as_ref());
+    }
+    unmask_legends(&out)
+}
+
+/// Placeholder spans still present in rendered output.
+///
+/// The failure this names is the quiet one: an unbound `{service}` renders
+/// perfectly, validates, and ships a literal brace into a live dashboard
+/// title. Legends are masked before the scan for the same reason the
+/// binder masks them — a preserved `{{namespace}}` CONTAINS the literal
+/// `{namespace}`, and reporting that as a leak would be reporting the one
+/// case that was handled correctly.
+#[must_use]
+pub fn unbound_placeholders(rendered: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    scan_placeholders(&mask_legends(rendered), &mut out);
+    out
+}
+
+#[cfg(test)]
+mod dashboard_param_tests {
+    use super::*;
+
+    #[test]
+    fn prose_braces_in_comments_are_not_required_params() {
+        // The real line from workload-overview.tlisp's header.
+        let src = ";; bound as {placeholders}\n(deflava-dashboard d :uid \"{env}\")";
+        let req = required_dashboard_params(src);
+        assert!(req.contains("env"));
+        assert!(
+            !req.contains("placeholders"),
+            "a brace in prose became a required param: {req:?}"
+        );
+    }
+
+    #[test]
+    fn a_semicolon_inside_a_string_does_not_start_a_comment() {
+        // Guards the string-awareness of strip_comments. A naive stripper
+        // truncates at the `;` and loses `{job}` from the required set.
+        let src = "(deflava-dashboard d :description \"a; b\" :uid \"{job}\")";
+        assert!(
+            required_dashboard_params(src).contains("job"),
+            "a placeholder after an in-string semicolon was dropped"
+        );
+    }
+
+    #[test]
+    fn selectors_are_not_mistaken_for_placeholders() {
+        // Both real: a LogsQL stream selector and a PromQL matcher.
+        let src = r#"(:expr "{namespace=\"camelot\"} up{job=\"auth\"}")"#;
+        assert!(
+            required_dashboard_params(src).is_empty(),
+            "a query selector was read as a placeholder"
+        );
+    }
+
+    #[test]
+    fn legends_survive_binding_and_are_not_reported_as_leaks() {
+        let params = BTreeMap::from([("namespace", "camelot")]);
+        let bound = bind_dashboard_params("{namespace} {{namespace}}", &params);
+        assert_eq!(bound, "camelot {{namespace}}");
+        assert!(
+            unbound_placeholders(&bound).is_empty(),
+            "a preserved Grafana legend was reported as an unbound placeholder"
+        );
+    }
+
+    #[test]
+    fn an_unbound_placeholder_is_named() {
+        let params = BTreeMap::from([("env", "camelot")]);
+        let bound = bind_dashboard_params("{env}-{service}", &params);
+        let leaked = unbound_placeholders(&bound);
+        assert_eq!(leaked.len(), 1);
+        assert!(leaked.contains("service"), "got {leaked:?}");
+    }
 }
 
 #[cfg(test)]

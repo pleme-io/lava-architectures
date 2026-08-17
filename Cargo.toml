@@ -12,6 +12,14 @@ version = "0.2.1"
 name = "lava_architectures"
 path = "src/lib.rs"
 
+# Renders a bundled dashboard .tlisp to Grafana JSON with no
+# pangea-operator in the loop, so the shipped bundle is regenerable from a
+# clean checkout. No clap: see the header of src/bin/render.rs for why the
+# arg parse is hand-rolled.
+[[bin]]
+name = "lava-render"
+path = "src/bin/render.rs"
+
 [lints.clippy]
 pedantic = "warn"
 

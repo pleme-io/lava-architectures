@@ -61,7 +61,7 @@
       :queries ((:ref "A"
                  :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic) | stats count() errors"
                  :datasource "{logs_datasource}"
-                 :presence "event_driven"))
+                 :presence "event-driven"))
       :thresholds ((:color "success") (:value 1 :color "warning") (:value 10 :color "danger")))))
 
    (:title "logs"
@@ -83,4 +83,4 @@
                  :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic)"
                  :datasource "{logs_datasource}"
                  :instant #t
-                 :presence "event_driven")))))))
+                 :presence "event-driven")))))))

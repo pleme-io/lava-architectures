@@ -108,7 +108,7 @@
                  :expr "breathe_band_cooldown_remaining_seconds > 0"
                  :datasource "{datasource}"
                  :legend "{{namespace}}/{{name}} ({{dim}})"
-                 :presence "event_driven")))))
+                 :presence "event-driven")))))
 
    (:title "band shape — util inside the green band"
     :panels

@@ -46,7 +46,7 @@
       :queries ((:ref "A"
                  :expr "{namespace=\"{namespace}\"} $search (result:fail OR result:denied OR result:error) | stats count() failures"
                  :datasource "{datasource}"
-                 :presence "event_driven"))
+                 :presence "event-driven"))
       :thresholds ((:color "success") (:value 1 :color "warning") (:value 10 :color "danger")))
 
      (:id "audit_total"
@@ -81,7 +81,7 @@
                  :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic)"
                  :datasource "{datasource}"
                  :instant #t
-                 :presence "event_driven")))
+                 :presence "event-driven")))
 
      (:id "audit_error_rate"
       :kind "stat"
@@ -91,5 +91,5 @@
       :queries ((:ref "A"
                  :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic) | stats count() errors"
                  :datasource "{datasource}"
-                 :presence "event_driven"))
+                 :presence "event-driven"))
       :thresholds ((:color "success") (:value 1 :color "warning") (:value 5 :color "danger")))))))

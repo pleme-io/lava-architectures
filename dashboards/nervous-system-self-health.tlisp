@@ -181,7 +181,7 @@
                  :expr "sum by (component_id) (rate(vector_component_errors_total[5m]))"
                  :datasource "{datasource}"
                  :legend "{{component_id}}"
-                 :presence "event_driven"))
+                 :presence "event-driven"))
       :thresholds ((:color "success") (:value 1 :color "danger")))
 
      (:id "vector_discarded"
@@ -193,5 +193,5 @@
                  :expr "sum by (component_id) (rate(vector_component_discarded_events_total[5m]))"
                  :datasource "{datasource}"
                  :legend "{{component_id}}"
-                 :presence "event_driven"))
+                 :presence "event-driven"))
       :thresholds ((:color "success") (:value 1 :color "danger")))))))

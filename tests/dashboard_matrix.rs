@@ -68,6 +68,37 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
                 ("logs_datasource", "vlogs"),
             ]),
         ),
+        // The fold of audit-explorer + log-explorer. Binds BOTH
+        // datasources on purpose: `declared_datasources_and_query_
+        // references_agree` below is what proves every LogsQL panel
+        // resolves to `vlogs` and every PromQL panel to `mimir`, which is
+        // exactly the defect (GAPS.md D1) the fold exists to fix — the
+        // audit board declared the logs plugin and bound the metrics uid.
+        // A row binding only one datasource could not have caught it.
+        (
+            "audit-logs-overview",
+            BTreeMap::from([
+                ("env", "camelot"),
+                ("namespace", "default"),
+                ("datasource", "mimir"),
+                ("logs_datasource", "vlogs"),
+            ]),
+        ),
+        (
+            "services-overview",
+            BTreeMap::from([("namespace", "default"), ("datasource", "mimir")]),
+        ),
+        // service-detail is the DUAL-DATASOURCE board (metrics + logs), so it
+        // is the one this matrix must carry to keep the datasource-agreement
+        // check honest — that is the defect audit-explorer shipped as D1.
+        (
+            "service-detail",
+            BTreeMap::from([
+                ("namespace", "default"),
+                ("datasource", "mimir"),
+                ("logs_datasource", "vlogs"),
+            ]),
+        ),
     ]
 }
 
@@ -78,23 +109,23 @@ fn dashboards_dir() -> std::path::PathBuf {
 /// Bind `{key}` placeholders — the same scalar substitution the operator's
 /// lava backend performs, reproduced here so the test exercises the real
 /// path rather than a pre-substituted fixture.
+///
+/// The binder itself moved into the library
+/// (`lava_architectures::bind_dashboard_params`) when `lava-render` needed
+/// the same substitution. Two textual binders are two binders free to
+/// disagree, and the disagreement would surface as this matrix passing on
+/// a document the CLI does not produce.
+///
+/// What this test was written to catch is unchanged. The implementation it
+/// mirrors — pangea-operator's Ruby `bind_params`, INCLUDING its `{{…}}`
+/// masking — is external to this crate, so it is still an independent
+/// implementation to diverge from. A Grafana legend is `{{label}}`, and a
+/// param sharing a label's name must not be substituted inside one: naive
+/// replacement turns `{{namespace}}` into `{default}`, which surfaces as
+/// the evaluator's `unknown var "default"` rather than as a broken legend.
+/// It caught exactly this one.
 fn bind(src: &str, params: &BTreeMap<&str, &str>) -> String {
-    // Mirrors the operator's `bind_params`, INCLUDING its `{{…}}` masking.
-    // A Grafana legend is `{{label}}`, and a param sharing a label's name
-    // must not be substituted inside one: naive replacement turns
-    // `{{namespace}}` into `{default}`, which surfaces as the evaluator's
-    // `unknown var "default"` rather than as a broken legend.
-    //
-    // This helper existing at all is the point — the test binds the way
-    // the operator binds, so a divergence here is a divergence the matrix
-    // can actually catch. It caught exactly this one.
-    const LB: &str = "\u{0}lava-lb\u{0}";
-    const RB: &str = "\u{0}lava-rb\u{0}";
-    let mut out = src.replace("{{", LB).replace("}}", RB);
-    for (k, v) in params {
-        out = out.replace(&format!("{{{k}}}"), v);
-    }
-    out.replace(LB, "{{").replace(RB, "}}")
+    lava_architectures::bind_dashboard_params(src, params)
 }
 
 #[test]

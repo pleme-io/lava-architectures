@@ -2,7 +2,7 @@
   "schema_version": 2,
   "cargo_lock_sha256": "a1b90b13f8b49f067af7f4239c2100b7ac3c7940a1c4a25f7f3f3b0018793c7c",
   "manifest_sha256": {
-    "Cargo.toml": "0fbee427ea91e6274d8ef3f3719ab71ee404afa8efaa9639d640bec5a0c13e8c"
+    "Cargo.toml": "e1a8a90d0ee72aa50a7510eb75f2f76c84e83bec5ecd115067c2e69a146528a7"
   },
   "target_resolves": {
     "base": {
@@ -1160,7 +1160,13 @@
       "lib_target": {
         "name": "lava_architectures",
         "path": "src/lib.rs"
-      }
+      },
+      "binaries": [
+        {
+          "name": "lava-render",
+          "path": "src/bin/render.rs"
+        }
+      ]
     },
     "lava-contracts-0.2.1": {
       "edition": "2024"

@@ -1,0 +1,429 @@
+;; service-detail — ONE board for ALL of the akeyless services.
+;;
+;; ── THE STRUCTURAL MOVE ─────────────────────────────────────────────────
+;; `workload-overview` is instantiated NINE times — auth, authcert, bis,
+;; gator, kfm, logan, sdr, uam, uamop — producing nine near-identical
+;; boards whose only difference is two bound scalars. Nine documents that
+;; must be edited nine times, drift nine ways, and are reviewed once.
+;;
+;; This board collapses them into one by promoting the varying scalar to a
+;; Grafana TEMPLATE VARIABLE. The variable's options are DISCOVERED from
+;; `up` rather than listed, which is the property that pays: a tenth
+;; akeyless service needs ZERO edits here — no new CR, no new row in the
+;; chart's dashboard list, no new file. It appears in the picker on its
+;; first scrape and disappears from it when it stops being scraped, which
+;; is strictly better than a hand-written tile that keeps reading green
+;; because its query still matches nothing.
+;;
+;; ── PARAMS, and what STOPPED being one ──────────────────────────────────
+;;   env              the cell, e.g. "camelot" — labels the note only
+;;   namespace        the namespace the akeyless services run in
+;;   datasource       the metrics datasource uid, e.g. "mimir"
+;;   logs_datasource  the logs datasource uid, e.g. "vlogs"
+;;
+;; NOT params any more: `service` and `job`. `workload-overview` took both
+;; (`service` scoped the pod regex, `job` scoped the `up` selector) and the
+;; camelot chart passed the same string for each. They are now the single
+;; `$service` variable, and every selector on this board reads it —
+;; `job="$service"` on the scrape side, `pod=~"$service.*"` on the
+;; kube-state / cAdvisor / logs side. Collapsing two params into one
+;; variable ASSUMES job-label == deployment name == pod-name prefix. That
+;; holds for the nine akeyless services (the Deployment name is the job
+;; name is the pod prefix) and it is not assumed silently: the `pods` tile
+;; and the log-volume calibration panel both go visibly empty against a
+;; service where it does not hold, instead of rendering a confident zero.
+;;
+;; NOT a param, unchanged from workload-overview: the LogsQL stream
+;; selector. Scalar binding is TEXTUAL, so a value carrying a double quote
+;; terminates the tlisp string literal it lands in and what renders is a
+;; different document that still parses. The stream is therefore composed
+;; here from `namespace`, which is quote-free by construction.
+;;
+;; ── WHAT IS CARRIED FORWARD FROM workload-overview ──────────────────────
+;; Per-service `pod=~"…"` scoping, and it is carried forward as the
+;; DELIBERATE FIX its header records it to be, not as a stylistic habit.
+;; The Ruby board these replaced built its selector from `namespace:`
+;; alone, so all nine per-service boards showed the SAME namespace-wide
+;; CPU and memory under nine different service titles. A per-service panel
+;; answering a namespace-wide question is worse than no panel, because it
+;; reads as evidence about the service. Every selector below is scoped to
+;; `$service`; there is no namespace-wide panel on this board except the
+;; log-volume DENOMINATOR, which says so in its own title.
+;;
+;; Also carried forward: every panel reads a series the SCRAPER emits (up,
+;; kube_pod_*, kube_deployment_*, container_*), never one the application
+;; has to declare. workload-overview's header records that 4 of the 6
+;; akeyless microservices expose no domain metric at all; re-measured
+;; 2026-08-17 over a fresh 2h window on akeyless's own Datadog, the whole
+;; `gateway_auth_total` family still returns ZERO SERIES. A board built on
+;; those counters renders empty, and an empty panel reads as "nothing is
+;; wrong" — the most expensive way a dashboard can be wrong.
+;;
+;; ── THE DEFECT THIS BOARD FIXES ─────────────────────────────────────────
+;; In the rendered bundle, all nine boards' log panels query the bare
+;; stream `{namespace="gamewarden"}` with no service selector, so all nine
+;; render an IDENTICAL namespace-wide log stream. workload-overview's
+;; header defends this on the grounds that narrowing "would need a
+;; per-line label the shipper is not known to emit".
+;;
+;; That claim is contradicted inside this very catalogue: `log-explorer`
+;; drives two query variables off `label_values(app)` and
+;; `label_values(pod)` against the same VictoriaLogs datasource, and its
+;; header states outright that these "are VictoriaLogs stream labels,
+;; which the shipper sets on every line". Both cannot be true. Resolved
+;; here in favour of log-explorer, because it is the board that actually
+;; reads the label store.
+;;
+;; HOW: the stream is composed as `{namespace="…",pod=~"$service.*"}` — a
+;; VictoriaLogs stream filter with a regex on the `pod` stream label, the
+;; SAME regex the metric panels use, so the two halves of the board can
+;; never disagree about what "$service" means.
+;;
+;; IS IT COMPLETE? Not by construction — and that is the honest answer,
+;; not a hedge. It is complete IF `pod` is a stream label the shipper sets
+;; AND pod names are prefixed by the job label. Rather than assert both, a
+;; PAIRED calibration panel plots namespace-wide line volume against
+;; service-narrowed line volume. If the narrowed series is flat zero while
+;; the namespace series is not, the assumption is wrong and the board says
+;; so on its face. That converts the failure mode from SILENT (an empty
+;; ERROR table reading as "no errors") into VISIBLE, which is the property
+;; the original selector lacked. A truly complete fix requires reading the
+;; shipper's label config, which is outside this document.
+;;
+;; ── FOUR DSL LIMITS MEASURED TODAY (2026-08-17), so nobody re-derives ───
+;; Read against lava-eval 0.2.1 / lava-core 0.2.2, the versions in this
+;; crate's Cargo.lock.
+;;
+;;  1. `:presence` is matched KEBAB-CASE by the reader —
+;;     lava-eval/src/dashboard.rs:290-296 matches "event-driven" and
+;;     "conditional", and everything else falls through to
+;;     `Presence::Continuous` WITHOUT an error. lava-core's serde name for
+;;     the same variant is snake_case (`event_driven`), which is where the
+;;     underscore spelling comes from. Consequence: every
+;;     `:presence "event-driven"` in this catalogue — workload-overview
+;;     and nervous-system-self-health both carry it — is silently typed
+;;     Continuous, i.e. the field is not doing its job on those boards.
+;;     This board writes "event-driven" so the typing is real. Do not
+;;     "correct" it back to the underscore; that is the bug.
+;;  2. There is no BAR draw style. `:graph` accepts none|area|auto only
+;;     (lava-eval/src/dashboard.rs:253-259), so the house rule "bars +
+;;     increase() for counters" is expressible only in the query and the
+;;     title. Every counter panel below uses increase() and names the
+;;     window in its title; the bar rendering is a gap in lava-core.
+;;  3. There is no column SORT and no transformation block — the renderer
+;;     emits no `options.sortBy` (lava-core/src/dashboard/render.rs,
+;;     `JOptions`). So this board ships NO ranked tables: a table titled
+;;     "Top N by X" would promise an ordering the JSON does not carry.
+;;     Cardinality is bounded in the query with topk() instead, which is
+;;     a real bound rather than a claimed one.
+;;  4. A `text` panel has no content field — `JOptions` carries no
+;;     `content`, so the note below lands in `:description` (Grafana's
+;;     panel-info tooltip) rather than in the panel body. It is also why
+;;     the note panel carries a hidden query: `Dashboard::validate`
+;;     rejects any panel with zero queries, text panels included.
+;;
+;; ── ONE MORE MEASURED FACT THAT SHAPES THE BOARD ────────────────────────
+;; camelot's census (dashboard_matrix.rs, 2026-08-11 23:40Z) recorded
+;; `count by (job) (up{job=~"auth|authcert|bis|uam|uamop|kfm|sdr|gator|logan"})`
+;; returning ZERO ROWS — none of the nine services is scraped there at
+;; all. On a boundary in that state the `$service` picker is EMPTY and
+;; every panel renders empty with it. That is not a defect in this board,
+;; and it is not left to be guessed at either: the `scrape present?` tile
+;; is an `absent()` probe that goes red precisely in that case, and it
+;; sits second in the header row for that reason. Fix the scrape, not the
+;; workload. Re-measure before acting on the figure — it is a dated
+;; snapshot and nothing re-takes it.
+
+(deflava-dashboard service-detail
+  :uid "akl-tenant-service-detail"
+  :title "Akeyless - Tenant Service Detail"
+  :description "One board for every akeyless service, selected with the $service variable. Presence, defects and saturation from the scraper's own series — presence is not health: a process can report while serving errors."
+  :tags ("akeyless" "tenant" "service")
+  :refresh "30s"
+  :timezone "utc"
+  :time (:from "now-6h" :to "now")
+
+  :datasources ((:uid "{datasource}" :type "prometheus" :lang "promql")
+                (:uid "{logs_datasource}" :type "victoriametrics-logs-datasource" :lang "logsql"))
+
+  ;; The one variable that replaces nine boards. Single-select on purpose:
+  ;; this is a DETAIL board, and the panels below — paired used-vs-limit,
+  ;; per-pod topk — are read one service at a time. Multi-select would mix
+  ;; two services' pods into one topk(20) and quietly hide the smaller
+  ;; one's tail. `include-all` is off for the same reason, and because an
+  ;; "All" option would resolve `job="$service"` to a regex-shaped value
+  ;; that an equality matcher cannot use.
+  :variables ((:name "service" :kind "query" :label "service"
+               :datasource "{datasource}"
+               :query "label_values(up{namespace=\"{namespace}\"}, job)"
+               :multi #f
+               :include-all #f))
+
+  :rows
+  (;; ── note ────────────────────────────────────────────────────────────
+
+   ;; ── now ─────────────────────────────────────────────────────────────
+   ;; Exactly six scalar tiles, and STATUS COUNTERS only — no saturation.
+   ;; Saturation is the explanation, never the headline: a service pinned
+   ;; at 90% CPU and serving fine is not the thing to lead with, and a
+   ;; service in CrashLoopBackOff is. Each tile is width 4 so all six
+   ;; occupy one grid row (6 x 4 = 24); the model's default stat width is
+   ;; 6, which would wrap them onto two rows and break the reading order.
+   (:title "Service - Now"
+    :panels
+    ((:id "svc_up"
+      :kind "stat"
+      :width 4
+      :title "up"
+      :unit "short"
+      :description "0 means at least one $service target is not reporting on job=\"$service\". min() rather than max() on purpose: one dead replica among four healthy ones must not be averaged into a green tile."
+      :queries ((:ref "A"
+                 :expr "min(up{namespace=\"{namespace}\",job=\"$service\"})"
+                 :datasource "{datasource}"
+                 :instant #t))
+      ;; Liveness ramps the wrong way — LOWER is worse — so the base band
+      ;; is the danger colour and the good band sits above it.
+      :thresholds ((:color "danger") (:value 1 :color "success")))
+
+     (:id "scrape_absent"
+      :kind "stat"
+      :width 4
+      :title "scrape present?"
+      :unit "short"
+      :description "1 when the up series for job=\"$service\" is absent ENTIRELY — no target, no error, nothing. This is the failure the tile beside it structurally cannot show: with no series there is nothing to evaluate as 0, so a missing scrape and a healthy service produce the same green. Measured on camelot 2026-08-11: none of the nine akeyless services was scraped, so this tile is the one that would have been red."
+      :queries ((:ref "A"
+                 :expr "absent(up{namespace=\"{namespace}\",job=\"$service\"})"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "pods"
+      :kind "stat"
+      :width 4
+      :title "pods"
+      :unit "short"
+      :description "How many $service pods kube-state currently knows about. Also the calibration for every pod=~\"$service.*\" panel below: zero here with the service demonstrably running means the pod-name prefix does not match the job label, and the per-pod panels are empty for that reason rather than for a resource reason."
+      :queries ((:ref "A"
+                 :expr "count(kube_pod_info{namespace=\"{namespace}\",pod=~\"$service.*\"})"
+                 :datasource "{datasource}"
+                 :instant #t))
+      :thresholds ((:color "danger") (:value 1 :color "success")))
+
+     (:id "replicas_unavailable"
+      :kind "stat"
+      :width 4
+      :title "replicas unavailable"
+      :unit "short"
+      :description "Replicas the Deployment wants and does not have. Reads the desired-vs-actual gap directly, so a service scaled to 3 and running 1 is one number rather than a comparison the reader has to make. Empty means kube-state has no Deployment matching $service — meaningful, hence conditional."
+      :queries ((:ref "A"
+                 :expr "sum(kube_deployment_status_replicas_unavailable{namespace=\"{namespace}\",deployment=~\"$service.*\"})"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 2 :color "danger")))
+
+     (:id "restarts_1h"
+      :kind "stat"
+      :width 4
+      :title "restarts /1h"
+      :unit "short"
+      :description "Container restarts across all $service pods in the last hour. A counter read through increase(), so it is a count of events in the window rather than a lifetime total that never comes back down. Empty is GOOD here — nothing restarted."
+      :queries ((:ref "A"
+                 :expr "sum(increase(kube_pod_container_status_restarts_total{namespace=\"{namespace}\",pod=~\"$service.*\"}[1h]))"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 3 :color "danger")))
+
+     (:id "crashloop"
+      :kind "stat"
+      :width 4
+      :title "containers crashlooping"
+      :unit "short"
+      :description "Containers held in CrashLoopBackOff right now. Distinct from the restart count beside it: restarts counts what already happened, this counts what is still stuck. Empty is GOOD — kube-state only emits the waiting-reason series while a container is in that state."
+      :queries ((:ref "A"
+                 :expr "count(kube_pod_container_status_waiting_reason{namespace=\"{namespace}\",pod=~\"$service.*\",reason=\"CrashLoopBackOff\"} == 1)"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))))
+
+   ;; ── health ──────────────────────────────────────────────────────────
+   ;; The same six questions over time, plus the per-pod dimension the
+   ;; scalars flatten away. Paired signals share ONE panel with short
+   ;; aliases — desired against available is a comparison, and two panels
+   ;; make the reader do the subtraction across a gap in their vision.
+   (:title "Service - Health"
+    :panels
+    ((:id "replicas_desired_vs_available"
+      :kind "timeseries"
+      :title "replicas: desired vs available (count)"
+      :unit "short"
+      :description "The availability question in one frame. Two lines converged is healthy; desired stepping up while available lags is a rollout in progress; available dropping under a flat desired is the incident. Conditional rather than event-driven: empty means no Deployment matched $service, which is a finding, not quiet."
+      :queries ((:ref "A"
+                 :expr "sum(kube_deployment_spec_replicas{namespace=\"{namespace}\",deployment=~\"$service.*\"})"
+                 :datasource "{datasource}"
+                 :legend "desired"
+                 :presence "conditional")
+                (:ref "B"
+                 :expr "sum(kube_deployment_status_replicas_available{namespace=\"{namespace}\",deployment=~\"$service.*\"})"
+                 :datasource "{datasource}"
+                 :legend "available"
+                 :presence "conditional")))
+
+     (:id "restarts_by_pod"
+      :kind "timeseries"
+      :title "restarts by pod (count /1h)"
+      :unit "short"
+      :description "A counter, read through increase() over a 1h window, bounded to the 20 worst pods. Which pod restarted matters more than how many restarts happened: one pod cycling is a bad node or a bad replica, all pods cycling together is a bad deploy."
+      :queries ((:ref "A"
+                 :expr "topk(20, increase(kube_pod_container_status_restarts_total{namespace=\"{namespace}\",pod=~\"$service.*\"}[1h]))"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 3 :color "danger")))
+
+     (:id "waiting_by_pod"
+      :kind "timeseries"
+      :title "waiting containers by pod and reason (count)"
+      :unit "short"
+      :description "Every reason a $service container is stuck before running, not only CrashLoopBackOff — an ImagePullBackOff and a CreateContainerConfigError present as the same 'it is not up' to everything else on this board and have completely different fixes. Empty is GOOD."
+      :queries ((:ref "A"
+                 :expr "topk(20, kube_pod_container_status_waiting_reason{namespace=\"{namespace}\",pod=~\"$service.*\",reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|CreateContainerError\"} == 1)"
+                 :datasource "{datasource}"
+                 :legend "{{pod}} {{reason}}"
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "oomkilled_by_pod"
+      :kind "timeseries"
+      :title "OOMKilled by pod (count)"
+      :unit "short"
+      :description "A $service pod was terminated by the OOM killer — raise the memory limit or find the leak. Read this against the used-vs-limit panel below: a kill with used sitting well under limit is a spike between scrapes, not a slow leak, and the limit is not the thing to raise."
+      :queries ((:ref "A"
+                 :expr "topk(20, kube_pod_container_status_last_terminated_reason{namespace=\"{namespace}\",pod=~\"$service.*\",reason=\"OOMKilled\"})"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))))
+
+   ;; ── resources ───────────────────────────────────────────────────────
+   ;; Saturation, and it sits fourth rather than second on purpose:
+   ;; saturation is the explanation for a defect above it, never the
+   ;; headline. Every per-pod series is bounded topk(20) — uniformly, not
+   ;; case by case, because the one panel that forgets is the one that
+   ;; melts the browser on a 200-pod deploy.
+   ;;
+   ;; Three signals here that workload-overview does not have, each
+   ;; answering a question its CPU/memory pair leaves open: whether the
+   ;; CPU LIMIT is binding (throttling), whether the memory limit is close
+   ;; (used vs limit on one panel), and whether the service is talking to
+   ;; anything at all (network).
+   (:title "Service - Resources"
+    :panels
+    ((:id "cpu_by_pod"
+      :kind "timeseries"
+      :title "CPU by pod (cores)"
+      :unit "short"
+      :description "Per-pod CPU from cAdvisor, in cores. `container!=\"\"` drops the pod-sandbox pseudo-container, which would otherwise double-count every pod's usage against itself."
+      :queries ((:ref "A"
+                 :expr "topk(20, sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"{namespace}\",pod=~\"$service.*\",container!=\"\"}[5m])))"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}")))
+
+     (:id "memory_vs_limit_by_pod"
+      :kind "timeseries"
+      :title "memory by pod: used vs limit (bytes)"
+      :unit "bytes"
+      :description "ONE panel, not two. Working-set against the configured limit is a comparison, and split across two panels with independent y-axes the reader cannot make it — which is how a pod at 95% of its limit gets read as 'memory looks flat'. The limit series is filtered `> 0`: an unlimited container reports 0, and a 0-byte limit line drawn under a real usage line reads as a pod permanently over its limit. Empty limit series therefore means NO LIMIT IS SET — meaningful, hence conditional, and worth knowing next to the OOMKilled panel above."
+      :queries ((:ref "A"
+                 :expr "topk(20, sum by (pod) (container_memory_working_set_bytes{namespace=\"{namespace}\",pod=~\"$service.*\",container!=\"\"}))"
+                 :datasource "{datasource}"
+                 :legend "used {{pod}}")
+                (:ref "B"
+                 :expr "topk(20, sum by (pod) (container_spec_memory_limit_bytes{namespace=\"{namespace}\",pod=~\"$service.*\",container!=\"\"} > 0))"
+                 :datasource "{datasource}"
+                 :legend "limit {{pod}}"
+                 :presence "conditional")))
+
+     (:id "cpu_throttling_by_pod"
+      :kind "timeseries"
+      :title "CPU throttled periods by pod (count /5m)"
+      :unit "short"
+      :description "A COUNTER, read through increase() over 5m — the number of CFS periods in which the kernel stopped the container because it had spent its quota. This is the panel that explains a service that is slow while its CPU graph looks unremarkable: throttling caps a pod BELOW its usage line, so the usage line stays flat and healthy-looking precisely because the limit is binding. Empty is NOT 'no throttling' — the series only exists where a CPU limit is configured, so empty means no CPU quota is set at all. Conditional for that reason."
+      :queries ((:ref "A"
+                 :expr "topk(20, sum by (pod) (increase(container_cpu_cfs_throttled_periods_total{namespace=\"{namespace}\",pod=~\"$service.*\",container!=\"\"}[5m])))"
+                 :datasource "{datasource}"
+                 :legend "{{pod}}"
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 100 :color "danger")))
+
+     (:id "network_by_pod"
+      :kind "timeseries"
+      :title "network by pod: rx vs tx (bytes/s)"
+      :unit "Bps"
+      :description "Receive against transmit on ONE panel — the shape of the pair is the signal. A service whose rx collapses while tx holds is being starved by a caller; both collapsing together while the pod stays up is the quietest way an akeyless service dies, and nothing else on this board would show it. NOTE the deliberate absence of `container!=\"\"` here: cAdvisor attributes network counters to the pod SANDBOX, so the filter that is correct on the CPU and memory panels above would drop exactly the series that carries this signal and render an empty panel."
+      :queries ((:ref "A"
+                 :expr "topk(20, sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"{namespace}\",pod=~\"$service.*\"}[5m])))"
+                 :datasource "{datasource}"
+                 :legend "rx {{pod}}")
+                (:ref "B"
+                 :expr "topk(20, sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"{namespace}\",pod=~\"$service.*\"}[5m])))"
+                 :datasource "{datasource}"
+                 :legend "tx {{pod}}")))))
+
+   ;; ── logs ────────────────────────────────────────────────────────────
+   ;; The stream is narrowed to $service — see the defect note in the
+   ;; header. The calibration panel is what makes the narrowing safe to
+   ;; ship: it plots the namespace-wide denominator beside the narrowed
+   ;; numerator, so a `pod` label that is absent or shaped differently
+   ;; than assumed shows up as a flat-zero line against a live one,
+   ;; instead of as an empty ERROR table that reads as good news.
+   (:title "Service - Logs"
+    :panels
+    ((:id "log_error_count"
+      :kind "stat"
+      :width 6
+      :title "error lines"
+      :unit "short"
+      :description "Error-class lines from $service in the window. Empty is GOOD — but only if the calibration panel beside it shows the narrowed stream carrying lines at all."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\",pod=~\"$service.*\"} (level:error OR level:fatal OR level:critical OR level:panic) | stats count() errors"
+                 :datasource "{logs_datasource}"
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 5 :color "danger")))
+
+     (:id "log_volume_calibration"
+      :kind "timeseries"
+      :width 18
+      :title "log lines: namespace vs $service (count)"
+      :unit "short"
+      :description "THE CHECK ON THIS BOARD'S OWN LOG NARROWING, and the only deliberately namespace-wide query here. 'namespace' is the denominator, '$service' the same stream filtered by pod=~\"$service.*\". Both moving together is normal. $service flat at zero while namespace carries lines means the narrowing matched nothing — either the shipper does not set a `pod` stream label, or pod names are not prefixed by the job label — and every log panel below is empty for that reason, NOT because the service is quiet. Both flat at zero means the stream itself stopped arriving. Read this before concluding anything from the tables below."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} | stats count() lines"
+                 :datasource "{logs_datasource}"
+                 :legend "namespace")
+                (:ref "B"
+                 :expr "{namespace=\"{namespace}\",pod=~\"$service.*\"} | stats count() lines"
+                 :datasource "{logs_datasource}"
+                 :legend "$service")))
+
+     (:id "log_lines"
+      :kind "table"
+      :title "$service log lines"
+      :description "Every line the $service pods emitted — full context, in the order it arrived. This is the panel that used to be namespace-wide and identical across all nine boards; it is now scoped by the same regex the metric panels use."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\",pod=~\"$service.*\"}"
+                 :datasource "{logs_datasource}"
+                 :instant #t)))
+
+     (:id "log_errors"
+      :kind "table"
+      :title "$service ERROR lines"
+      :description "Error-class lines only — the triage window. Empty means no errors, not a broken panel, which is why this query is typed event-driven; the calibration panel above is what distinguishes those two cases."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\",pod=~\"$service.*\"} (level:error OR level:fatal OR level:critical OR level:panic)"
+                 :datasource "{logs_datasource}"
+                 :instant #t
+                 :presence "event-driven")))))))

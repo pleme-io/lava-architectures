@@ -1,0 +1,359 @@
+;; audit-logs-overview — the tenant's audit + log surface, one board.
+;;
+;; Folds `audit-explorer` and `log-explorer` into a single Omri-shaped
+;; tenant board: status counters first, then the compliance surface, then
+;; the pipeline that feeds it, then the general explorer. Audit leads
+;; because audit is what an assessor reads — AU-5a (audit processing
+;; failures), AU-9b (protection of audit information), AU-12 (audit
+;; generation). The log explorer is the drill-down underneath it, not a
+;; peer.
+;;
+;; Params:
+;;   env              the cell, e.g. "gamewarden"      -> description only
+;;   namespace        the application namespace every panel is scoped to
+;;   datasource       the METRICS datasource uid (prometheus / vmsingle)
+;;   logs_datasource  the LOGS datasource uid (vlogs)
+;;
+;; NOT a param: the LogsQL stream selector. Scalar binding is TEXTUAL, so
+;; a value carrying `"` — and `{namespace="gamewarden"}` does — ends the
+;; tlisp string literal early and what evaluates is a different document
+;; that still parses. The selector is composed here from `namespace`,
+;; which is quote-free by construction. Inherited rule, stated again
+;; because this board composes more selectors than either parent did.
+;;
+;; ── THE DEFECT THIS FOLD FIXES, at cause (GAPS.md D1) ────────────────────
+;; `audit-explorer.tlisp` declares ONE datasource, typed
+;; `victoriametrics-logs-datasource`, and binds its uid from `{datasource}`
+;; — the METRICS uid. The chart passes `datasource: vm`, so all five of its
+;; panels shipped as `{"type":"victoriametrics-logs-datasource","uid":"vm"}`
+;; and asked LogsQL of a Prometheus store. It renders clean and shows
+;; nothing. Its sibling `log-explorer.tlisp` binds `{logs_datasource}` and
+;; resolves correctly, which is why the same payload contains a proof of
+;; both shapes.
+;;
+;; Fixed HERE, in the architecture, not in the rendered JSON: this board
+;; declares BOTH datasources and every LogsQL query binds
+;; `{logs_datasource}`, every PromQL query binds `{datasource}`. Patching
+;; the emitted JSON would have put the payload out of sync with its
+;; generator and left the next render broken again.
+;;
+;; ── What the fold actually removed, measured on the two sources ──────────
+;; The two boards shipped FOUR tables between them and only TWO distinct
+;; queries:
+;;
+;;   audit-explorer  audit_events       `{ns} $search`
+;;   log-explorer    all_lines          `{ns} $search`                 ← same
+;;   audit-explorer  audit_error_window `{ns} $search (level:error…)`
+;;   log-explorer    error_lines        `{ns} $search (level:error…)`  ← same
+;;
+;; So "the audit stream" and "all lines" were the same query wearing two
+;; titles. Each distinct table query appears once here. The genuinely
+;; audit-specific view — the `result:fail|denied|error` filter — had a stat
+;; on audit-explorer and NO table anywhere; it gets one here, because a
+;; count is not a surface an assessor can read.
+;;
+;; ── The $app / $pod variables are DROPPED, and that is not a trim ────────
+;; log-explorer declares `app` and `pod` as query variables and its
+;; `all_lines` description tells the reader to "narrow with the app and pod
+;; variables above rather than by editing the query". Neither `$app` nor
+;; `$pod` appears in ANY of its five expressions. They are dropdowns that
+;; scope nothing, next to a sentence saying they do — the same defect class
+;; as D1: a control that looks like it works. Their discovery query
+;; (`label_values(app)`) also carries no namespace constraint, so on a
+;; namespace-scoped board they would list every app in the boundary.
+;;
+;; `$search` is kept because it is the one that is real: it is interpolated
+;; into all six LogsQL expressions, so a reader types `result:denied`, a pod
+;; name or a free-text term and every panel narrows at once. A self-service
+;; explorer beats a fixed set of queries, and a textbox beats a query
+;; variable here for the reason audit-explorer already recorded — a query
+;; variable needs a label the shipper is known to emit, and an invented one
+;; renders an empty dropdown that reads as "no values" instead of "wrong
+;; label".
+;;
+;; ── The "audit pipeline" row is a REHOME, and the reason is subtle ───────
+;; `gamewarden-nervous-system` is being dropped from this bundle: it watches
+;; OUR control plane (scrape coverage, targets by namespace, the plane
+;; watching itself), and this boundary does not want a board about our
+;; tooling. Its three Vector panels look like more of the same — Vector is
+;; our log shipper, self-monitoring is our concern.
+;;
+;; In THIS boundary they are not. Vector IS the audit sink, and the
+;; `fedramp.audit` alert group fires on exactly the metrics those panels
+;; read:
+;;
+;;   AuditSinkErroring    AU-5a  sum(increase(vector_component_errors_total
+;;                                {namespace="…",component_kind="sink"}[5m])) > 0
+;;   AuditEventsDiscarded AU-5a  sum(increase(
+;;                                vector_component_discarded_events_total
+;;                                {namespace="…"}[5m])) > 0
+;;
+;; Drop the board without rehoming and five compliance rules page a human
+;; with no dashboard to triage them on. Carried here namespace-scoped rather
+;; than fleet-wide — the nervous-system originals were unscoped, and a
+;; triage panel whose selector differs from the rule's will disagree with
+;; the page it is supposed to explain. The two stat tiles below reproduce
+;; the alert expressions BYTE FOR BYTE, including `component_kind="sink"`
+;; and the 5m window, so tile and rule cannot drift apart.
+;;
+;; The other three rules in the group (AuditStorageCapacity on
+;; `kubelet_volume_stats_*`, AuditStoreAuthFailures and
+;; AuditGenerationStopped on ClickHouse series) are NOT panelled here. That
+;; is a gap, stated rather than papered over: none of those families has
+;; recorded evidence of being emitted in this boundary, and a panel on a
+;; series nothing produces renders empty and reads as "nothing is wrong" —
+;; the most expensive way a dashboard can be wrong. They belong on an audit
+;; STORE board once the ClickHouse scrape is proven.
+;;
+;; ── Deliberately absent, the negative knowledge a chart cannot express ───
+;; * No akeyless application counter. `gateway_auth_total` and its family
+;;   returned ZERO SERIES when re-measured 2026-08-17 over a fresh 2h window
+;;   on akeyless's own Datadog; 4 of the 6 microservices expose no domain
+;;   metric at all. Every metric panel here reads something the SCRAPER or
+;;   the SHIPPER emits.
+;; * No NOTE panel, though the house style opens with one. The renderer
+;;   emits no `options.content` for a `text` panel (lava-core
+;;   `dashboard/render.rs`, `JOptions` has five fields and none of them is
+;;   `content`), so a text panel ships an empty box with the note hidden in
+;;   a tooltip. The note is in this header and in the board `:description`,
+;;   which Grafana does render, until the renderer grows the field.
+;; * No cross-namespace query. Every selector carries `namespace=
+;;   "{namespace}"`. A board that ranges over all namespaces is a platform
+;;   board wearing an application title.
+;; * No separate audit stream. There is no audit-only selector to read —
+;;   both parents queried the namespace stream — so "audit events" here
+;;   means "lines on the {namespace} stream" and the FILTERS are what make a
+;;   panel audit-specific. Said in the descriptions too, because a reader
+;;   who assumes otherwise will read the denominator wrong.
+;;
+;; ── Three measured DSL facts this board obeys ────────────────────────────
+;; 1. `:presence` is spelled "event-driven", with a HYPHEN. lava-eval
+;;    (`dashboard.rs`, the `:presence` arm) matches "event-driven" and
+;;    "conditional" and falls through everything else to `Continuous`. All
+;;    five existing boards write "event_driven" with an underscore — 15
+;;    occurrences — and every one of them is silently typed `Continuous`,
+;;    which is the opposite of what the author meant: it says a series
+;;    should always be there. `event-driven` = empty is GOOD, nothing bad
+;;    happened. `conditional` = empty is meaningful.
+;; 2. Thresholds on a BY-DIMENSION timeseries destroy the dimension.
+;;    `has_thresholds` flips the panel's colour mode from `palette-classic`
+;;    to `thresholds`, so every series renders in the same band colour and
+;;    the `by (component_id)` you grouped on becomes unreadable. Thresholds
+;;    are therefore on the single-value stats and the single-series trends
+;;    only; the by-component panels carry none, deliberately. (The
+;;    nervous-system originals carried them, which is the second thing this
+;;    rehome corrects.)
+;; 3. Liveness ramps the wrong way — LOWER is worse — so a denominator or a
+;;    presence tile puts the danger colour in the BASE band and the good
+;;    band above it.
+;;
+;; Cardinality is bounded uniformly: every by-dimension timeseries is
+;; topk-bounded at 20, even where the dimension is small today. The bound is
+;; against tomorrow's Vector config, not today's — an unbounded panel is the
+;; one that becomes unreadable without anyone touching it.
+
+(deflava-dashboard audit-logs-overview
+  :uid "akl-tenant-audit"
+  :title "Akeyless - Tenant Audit & Logs Overview"
+  :description "Audit and log surface for the {env} cell, scoped to the {namespace} namespace.\n\nRows 1-3 are the compliance surface — the audit event stream, its failure mix, and the Vector pipeline the fedramp.audit rules fire on (AU-5a, AU-9b). Row 4 is the general log explorer underneath it.\n\n$search scopes EVERY panel at once: type a pod name, a free-text term, or a LogsQL field filter such as result:denied.\n\nCaveat: this reads the {namespace} LOG STREAM, not a dedicated audit stream — no audit-only selector exists — so \"audit events\" means \"lines on the {namespace} stream\" and the filters are what make a panel audit-specific.\n\nDeliberately absent: no panel reads an akeyless application counter (gateway_auth_total and its family returned zero series when last measured, and an empty panel reads as \"nothing is wrong\"), and no panel ranges outside {namespace}."
+  :tags ("akeyless" "tenant" "audit")
+  :refresh "1m"
+  :timezone "utc"
+  :time (:from "now-6h" :to "now")
+
+  :datasources ((:uid "{datasource}" :type "prometheus" :lang "promql")
+                (:uid "{logs_datasource}" :type "victoriametrics-logs-datasource" :lang "logsql"))
+
+  ;; One variable, and it is interpolated into every LogsQL expression on
+  ;; the board. See the header for why $app / $pod did not come across.
+  :variables ((:name "search" :kind "textbox" :label "search"))
+
+  :rows
+  (;; ── Audit - Status ──────────────────────────────────────────────────
+   ;; Six scalar tiles on one line (:width 4 × 6 = the 24-column grid; the
+   ;; stat default of 6 would wrap four-and-two). Three read the log plane,
+   ;; three read the metric plane, and each "empty is good" tile is placed
+   ;; beside the tile that says whether empty means anything: the event
+   ;; count is the denominator for the two failure counts, and the scrape
+   ;; check is the denominator for the two Vector counts.
+   (:title "Audit - Status"
+    :panels
+    ((:id "audit_events_total"
+      :kind "stat"
+      :title "Audit events"
+      :unit "short"
+      :width 4
+      :description "The DENOMINATOR, and the reason it is the first tile rather than a footnote. Every count beside it is meaningless until this one is non-zero: an audit stream that stopped arriving reads as a perfectly clean one. Lines on the {namespace} stream in the window, scoped by $search."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search | stats count() events"
+                 :datasource "{logs_datasource}"))
+      ;; Inverted: zero audit events is the alarming state here.
+      :thresholds ((:color "danger") (:value 1 :color "success")))
+
+     (:id "audit_failed_events"
+      :kind "stat"
+      :title "Failed audit events"
+      :unit "short"
+      :width 4
+      :description "Audit lines whose outcome is a failure or a denial — the AU-9b reading. Empty is GOOD (no failures), which is why this is event-driven and must never be read as a broken query. Read it against the tile to its left."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (result:fail OR result:denied OR result:error) | stats count() failures"
+                 :datasource "{logs_datasource}"
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 10 :color "danger")))
+
+     (:id "audit_error_lines"
+      :kind "stat"
+      :title "Error lines"
+      :unit "short"
+      :width 4
+      :description "Error-class lines on the stream, by log LEVEL rather than by audit outcome. A distinct question from the tile beside it: a denied request is a successful audit record of a refusal, an error line is the system failing to do its job."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic) | stats count() errors"
+                 :datasource "{logs_datasource}"
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 5 :color "danger")))
+
+     (:id "audit_sink_errors_5m"
+      :kind "stat"
+      :title "Audit sink errors /5m"
+      :unit "short"
+      :width 4
+      :description "AU-5a. The audit sink failing to write means the audit trail is INCOMPLETE for the duration, which is a control failure whether or not anything else looks wrong. This expression is the AuditSinkErroring rule's expression byte for byte, so the tile and the page cannot disagree. Empty is good; read the scrape tile two to the right before believing it."
+      :queries ((:ref "A"
+                 :expr "sum(increase(vector_component_errors_total{namespace=\"{namespace}\",component_kind=\"sink\"}[5m]))"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "audit_events_discarded_5m"
+      :kind "stat"
+      :title "Discarded audit events /5m"
+      :unit "short"
+      :width 4
+      :description "AU-5a. Events the pipeline dropped rather than delivered. Discarded records are NOT recoverable — this is a permanent hole in the trail, not a delay — which is why any non-zero value goes straight to danger. Mirrors the AuditEventsDiscarded rule exactly."
+      :queries ((:ref "A"
+                 :expr "sum(increase(vector_component_discarded_events_total{namespace=\"{namespace}\"}[5m]))"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))
+
+     (:id "audit_pipeline_scraped"
+      :kind "stat"
+      :title "Audit pipeline scraped?"
+      :unit "short"
+      :width 4
+      :description "1 when NO vector series exists for {namespace} at all. The two tiles to the left and the whole pipeline row below CANNOT tell 'no errors' from 'nobody is looking' — both render empty — so this is the tile that decides which one you are reading. Note it shows No data when healthy: absent() returns nothing while the series is present. A deployed-and-unscraped shipper is the case this exists for; fix the scrape, not the workload."
+      :queries ((:ref "A"
+                 :expr "absent(vector_component_errors_total{namespace=\"{namespace}\"})"
+                 :datasource "{datasource}"
+                 :instant #t
+                 :presence "conditional"))
+      :thresholds ((:color "success") (:value 1 :color "danger")))))
+
+   ;; ── Audit - Outcomes ────────────────────────────────────────────────
+   ;; The two trends side by side answer one question the stats cannot: is
+   ;; a failure count a spike or a steady state, and is it rising because
+   ;; the system is degrading or because there is simply more traffic.
+   ;; Both are single-series (`| stats count()` with no `by`), so
+   ;; thresholds are safe here — see header fact 2.
+   (:title "Audit - Outcomes"
+    :panels
+    ((:id "audit_events_over_time"
+      :kind "timeseries"
+      :title "Audit events over time"
+      :unit "short"
+      :description "Volume of the whole scoped stream. Read this BEFORE concluding anything from an empty table below: a stream that stopped arriving and a system that stopped being used look identical in a table and completely different here."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search | stats count() lines"
+                 :datasource "{logs_datasource}")))
+
+     (:id "audit_failures_over_time"
+      :kind "timeseries"
+      :title "Failed audit events over time"
+      :unit "short"
+      :description "Failures and denials over the same scope and window. Its shape against the panel beside it is the whole question: a flat total with a rising failure line is a system degrading, both rising together is usually just more traffic."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (result:fail OR result:denied OR result:error) | stats count() failures"
+                 :datasource "{logs_datasource}"
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 10 :color "danger")))
+
+     (:id "audit_failed_event_stream"
+      :kind "table"
+      :title "Failed and denied audit events"
+      :description "The compliance reading surface: who, what, when, result — filtered to the outcomes that matter for AU-9b, newest first. Neither source board had this table; audit-explorer counted these events and then showed an UNFILTERED stream, so the failures the count was about had to be found by eye. Everything above this panel exists to tell you whether to trust it."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (result:fail OR result:denied OR result:error)"
+                 :datasource "{logs_datasource}"
+                 :instant #t
+                 :presence "event-driven")))))
+
+   ;; ── Audit pipeline - Vector delivery ────────────────────────────────
+   ;; Rehomed from the nervous-system board. In this boundary Vector is the
+   ;; AUDIT SINK, not our self-monitoring: these are the series the
+   ;; AuditSinkErroring and AuditEventsDiscarded rules fire on. Scoped to
+   ;; {namespace} to match the rules' own selectors. No thresholds — see
+   ;; header fact 2 — and topk-bounded, see the header's last paragraph.
+   (:title "Audit pipeline - Vector delivery"
+    :panels
+    ((:id "vector_errors_by_component"
+      :kind "timeseries"
+      :title "Sink errors by component (/s)"
+      :unit "short"
+      :description "WHICH pipeline component is failing, which the AU-5a tile above cannot say. Grouped by kind as well as id so a sink error — the one the alert watches — is distinguishable from a transform or source erroring upstream of it. Empty means no errors ONLY if 'Audit pipeline scraped?' is not firing; check that tile first."
+      :queries ((:ref "A"
+                 :expr "topk(20, sum by (component_id, component_kind) (rate(vector_component_errors_total{namespace=\"{namespace}\"}[5m])))"
+                 :datasource "{datasource}"
+                 :legend "{{component_kind}}/{{component_id}}"
+                 :presence "event-driven")))
+
+     (:id "vector_discarded_by_component"
+      :kind "timeseries"
+      :title "Discarded events by component (/s)"
+      :unit "short"
+      :description "Events dropped rather than delivered, by component — the tap shedding load. Every point on this chart is a permanent gap in the audit trail, so read it as loss, not as backpressure. Same scrape caveat as the panel beside it."
+      :queries ((:ref "A"
+                 :expr "topk(20, sum by (component_id, component_kind) (rate(vector_component_discarded_events_total{namespace=\"{namespace}\"}[5m])))"
+                 :datasource "{datasource}"
+                 :legend "{{component_kind}}/{{component_id}}"
+                 :presence "event-driven")))))
+
+   ;; ── Logs - Explorer ─────────────────────────────────────────────────
+   ;; The general drill-down, kept last: saturation and raw text are the
+   ;; explanation, never the headline. These are the log-explorer panels
+   ;; whose queries are NOT already on the board above.
+   (:title "Logs - Explorer"
+    :panels
+    ((:id "log_error_lines_over_time"
+      :kind "timeseries"
+      :title "Error lines over time"
+      :unit "short"
+      :width 24
+      :description "Error-class lines by LEVEL over the scoped window — the general-health trend, as distinct from the audit-outcome trend above. Full width because it is the one thing worth reading before opening either table below."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic) | stats count() errors"
+                 :datasource "{logs_datasource}"
+                 :presence "event-driven"))
+      :thresholds ((:color "success") (:value 1 :color "warning") (:value 10 :color "danger")))
+
+     (:id "log_all_lines"
+      :kind "table"
+      :title "All lines"
+      :description "Every line on the {namespace} stream — full context, unfiltered. Narrow it with $search rather than by editing the query, so the rest of the board narrows with you. This is the same query audit-explorer titled 'audit events'; it appears once here, under the name that describes what it actually returns."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search"
+                 :datasource "{logs_datasource}"
+                 :instant #t)))
+
+     (:id "log_error_lines"
+      :kind "table"
+      :title "ERROR lines"
+      :description "Error-class only — the fast-triage window. Empty means no errors, not a broken panel."
+      :queries ((:ref "A"
+                 :expr "{namespace=\"{namespace}\"} $search (level:error OR level:fatal OR level:critical OR level:panic)"
+                 :datasource "{logs_datasource}"
+                 :instant #t
+                 :presence "event-driven")))))))
