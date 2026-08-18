@@ -50,6 +50,7 @@ pub use lava_types::Type;
 pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("aws-vpc-network", 10),       // 1 vpc + 1 igw + 3 public + 3 private + 1 eip + 1 nat + 1 sg
     ("cloudflare-dns-records", 5), // root + www + api + wildcard + acme
+    ("discord-server-baseline", 3), // moderator role + category + text channel
     ("akeyless-secrets", 6),       // ci_auth + k8s_auth + db_pwd + api_key + db_target + role
     ("cloudflare-r2-bucket", 4),   // bucket + cors + custom-domain + cname
     ("public-dns", 6),             // zone + kms + ksk + dnssec + log-group + query-log

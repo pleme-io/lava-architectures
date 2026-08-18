@@ -241,6 +241,14 @@ fn minimal_bindings(
                 bag.insert(k.to_string(), v.to_string());
             }
         }
+        "discord-server-baseline" => {
+            // A Discord snowflake — 18 digits, string-typed on the wire even
+            // though it is numeric, which is how the provider models every id.
+            for (k, v) in [("server-id", "111122223333444455")] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
         _ => {}
     }
     (b, bag)
