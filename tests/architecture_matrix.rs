@@ -241,6 +241,26 @@ fn minimal_bindings(
                 bag.insert(k.to_string(), v.to_string());
             }
         }
+        "pleme-io-server" => {
+            // The channel lists have no interface default, so the matrix must
+            // supply them — and it supplies the REAL ones, not one element
+            // each. The registry's resource floor is also what `lava ls`
+            // reports to an operator, so it has to describe the architecture
+            // as written; a short list here would render 35 and force that
+            // floor down to a number that understates the real server by nine
+            // channels.
+            for (k, vs) in [
+                ("substrate-channels", ["magma", "lava", "sui", "nix"].as_slice()),
+                ("languages-channels", ["tatara-lisp", "blue"].as_slice()),
+                ("platform-channels", ["blackmatter", "camelot", "k8s"].as_slice()),
+                ("products-channels", ["mado", "hiroba", "gpu-apps"].as_slice()),
+                ("ops-channels", ["alerts", "releases"].as_slice()),
+                ("voice-channels", ["general", "pairing"].as_slice()),
+            ] {
+                b.set_list(k, vs.iter().map(|s| (*s).to_string()).collect());
+                bag.insert(k.to_string(), vs.join(","));
+            }
+        }
         "discord-server-baseline" => {
             // A Discord snowflake — 18 digits, string-typed on the wire even
             // though it is numeric, which is how the provider models every id.
@@ -380,3 +400,130 @@ fn every_bundled_architecture_has_a_registered_interface() {
     );
 }
 
+// ── pleme-io-server structural gates ──────────────────────────────────
+//
+// The matrix above proves the architecture EVALUATES and renders enough
+// resources. Neither of those notices if a permission bitfield is off by a
+// bit, or if a whole category is left with no overwrite at all — and both of
+// those are silent, security-relevant, and exactly the sort of thing a
+// declaration is supposed to make reviewable.
+
+fn render_pleme_io_server() -> serde_json::Value {
+    let src = std::fs::read_to_string(architecture_path("pleme-io-server")).expect("source");
+    let (bindings, _) = minimal_bindings("pleme-io-server");
+    eval_architecture(&src, &bindings)
+        .expect("evaluates")
+        .render_terraform_json()
+        .expect("renders")
+}
+
+/// Every permission constant in the file, recomputed from its bits.
+///
+/// The architecture cannot hold a numeric constant table — a numeric value in
+/// an architecture's `:inputs` fails evaluation, so the bitfields are written
+/// as literals at each site with their derivation in a comment. A comment
+/// cannot be wrong-and-noticed, so this recomputes each one from the shifts
+/// and asserts the rendered JSON matches. A mistyped bit is a red test rather
+/// than a channel that is quietly world-readable.
+#[test]
+fn pleme_io_server_permission_bits_are_correct() {
+    const VIEW_CHANNEL: u64 = 1 << 10;
+    const READ_MESSAGE_HISTORY: u64 = 1 << 16;
+    const SEND_MESSAGES: u64 = 1 << 11;
+    const ADD_REACTIONS: u64 = 1 << 6;
+    const EMBED_LINKS: u64 = 1 << 14;
+    const ATTACH_FILES: u64 = 1 << 15;
+    const MANAGE_MESSAGES: u64 = 1 << 13;
+    const CONNECT: u64 = 1 << 20;
+    const SPEAK: u64 = 1 << 21;
+    const ADMINISTRATOR: u64 = 1 << 3;
+
+    let read_only = VIEW_CHANNEL | READ_MESSAGE_HISTORY;
+    let participate =
+        read_only | SEND_MESSAGES | ADD_REACTIONS | EMBED_LINKS | ATTACH_FILES;
+    let moderate = participate | MANAGE_MESSAGES;
+    let voice = VIEW_CHANNEL | CONNECT | SPEAK;
+
+    // The values the file documents. If a shift above is edited, these fail
+    // first and name which composition moved.
+    assert_eq!(read_only, 66560, "READ_ONLY");
+    assert_eq!(participate, 117824, "PARTICIPATE");
+    assert_eq!(moderate, 126016, "MODERATE");
+    assert_eq!(voice, 3_146_752, "VOICE");
+    assert_eq!(ADMINISTRATOR, 8, "ADMINISTRATOR");
+
+    let json = render_pleme_io_server();
+    let roles = &json["resource"]["discord_role"];
+    assert_eq!(roles["founder"]["permissions"], ADMINISTRATOR);
+    assert_eq!(roles["maintainer"]["permissions"], moderate);
+    assert_eq!(roles["contributor"]["permissions"], participate);
+    assert_eq!(roles["bot"]["permissions"], participate);
+
+    // @everyone grants nothing server-wide; visibility is per channel.
+    assert_eq!(
+        json["resource"]["discord_role_everyone"]["everyone"]["permissions"], 0,
+        "@everyone must grant nothing at the server level"
+    );
+
+    let perms = &json["resource"]["discord_channel_permission"];
+    assert_eq!(perms["welcome-everyone"]["allow"], read_only);
+    assert_eq!(perms["substrate-contributor"]["allow"], participate);
+    assert_eq!(perms["voice-contributor"]["allow"], voice);
+    // ops is read-only for humans, and SEND_MESSAGES is DENIED rather than
+    // merely ungranted — the difference matters when a second overwrite or a
+    // role grant would otherwise re-add it.
+    assert_eq!(perms["ops-contributor"]["allow"], read_only);
+    assert_eq!(perms["ops-contributor"]["deny"], SEND_MESSAGES);
+
+    // Bitfields must render as JSON numbers. A string here would be coerced by
+    // some consumers and rejected by others, and the difference would only
+    // surface at apply time.
+    assert!(
+        perms["substrate-contributor"]["allow"].is_number(),
+        "permission must be a number, not a string"
+    );
+}
+
+/// No category may be left with no overwrite at all.
+///
+/// With the `@everyone` baseline at 0, a category nobody is granted access to
+/// is invisible to every role below founder. That fails safe, which is why the
+/// baseline is 0 — but silently, and a category that nobody can see is a bug
+/// rather than a policy. Every category is therefore required to be reachable
+/// by some role, and `welcome` is the one deliberate public exception.
+#[test]
+fn every_pleme_io_category_is_reachable_by_some_role() {
+    let json = render_pleme_io_server();
+    let categories: Vec<String> = json["resource"]["discord_category_channel"]
+        .as_object()
+        .expect("categories")
+        .keys()
+        .cloned()
+        .collect();
+    assert!(!categories.is_empty(), "no categories rendered — vacuous");
+
+    // Which channel each overwrite targets, as the rendered "${...id}" ref.
+    let targeted: Vec<String> = json["resource"]["discord_channel_permission"]
+        .as_object()
+        .expect("overwrites")
+        .values()
+        .filter_map(|p| p["channel_id"].as_str().map(str::to_owned))
+        .collect();
+
+    for cat in &categories {
+        let want = format!("${{discord_category_channel.{cat}.id}}");
+        assert!(
+            targeted.iter().any(|t| t == &want),
+            "category `{cat}` has no permission overwrite — with @everyone at 0 \
+             it is invisible to every role below founder"
+        );
+    }
+
+    // And the public front door really is public.
+    let welcome = format!("${{discord_text_channel.welcome.id}}");
+    assert!(
+        targeted.iter().any(|t| t == &welcome),
+        "#welcome carries no @everyone overwrite — the server would have no \
+         readable channel at all"
+    );
+}
