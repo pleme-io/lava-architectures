@@ -95,9 +95,9 @@ rec {
     crates = {
       "aho-corasick" = rec {
         crateName = "aho-corasick";
-        version = "1.1.4";
+        version = "1.1.5";
         edition = "2021";
-        sha256 = "00a32wb2h07im3skkikc495jvncf62jl6s96vwc7bhi70h9imlyx";
+        sha256 = "1fhjkp2nbs7gg4y1b68hpc8028rpax8aiscfh9b60q78m4pn90n9";
         libName = "aho_corasick";
         authors = [
           "Andrew Gallant <jamslam@gmail.com>"
@@ -241,8 +241,15 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.2.1";
+        version = "0.2.2";
         edition = "2024";
+        crateBin = [
+          {
+            name = "lava-render";
+            path = "src/bin/render.rs";
+            requiredFeatures = [ ];
+          }
+        ];
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
         libName = "lava_architectures";
         authors = [
@@ -627,9 +634,9 @@ rec {
       };
       "regex-automata" = rec {
         crateName = "regex-automata";
-        version = "0.4.16";
+        version = "0.4.18";
         edition = "2021";
-        sha256 = "1b8ihxq99g3hr8mr37bvhib4bfn8rlmpmp0wjg2q1j50plvdpkwg";
+        sha256 = "1cml0rm0ssqfkibh9nh3gy4b6hbsbicj1rihpwf2a4v4nawm71dd";
         libName = "regex_automata";
         authors = [
           "The Rust Project Developers"
@@ -932,9 +939,9 @@ rec {
       };
       "thiserror" = rec {
         crateName = "thiserror";
-        version = "2.0.19";
+        version = "2.0.20";
         edition = "2021";
-        sha256 = "1ngwxsjsa64v1n7vb90h2b0i3fqk1piwaf0z6fqdacqfhjc3b909";
+        sha256 = "0kxs6p295jffxhzaxpxv1dwaaf5iqlm6sx8h0djp6ancbxgj71pc";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -951,9 +958,9 @@ rec {
       };
       "thiserror-impl" = rec {
         crateName = "thiserror-impl";
-        version = "2.0.19";
+        version = "2.0.20";
         edition = "2021";
-        sha256 = "1ka10pqy1g8zy5al9m8yadg30jp8hx0q80j8awmd8131yw6gxjs3";
+        sha256 = "1bwjc94gi0xn5jz26h1a8bjj1wdkvvr6jifamyc4mp9n28zcs15w";
         procMacro = true;
         libName = "thiserror_impl";
         authors = [
