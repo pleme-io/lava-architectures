@@ -1,0 +1,713 @@
+{
+ "discord_category_channel": {
+  "attributes": {
+   "channel_id": {
+    "required": false,
+    "settable": false
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "position": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "type": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_channel_permission": {
+  "attributes": {
+   "allow": {
+    "required": false,
+    "settable": true
+   },
+   "channel_id": {
+    "required": true,
+    "settable": true
+   },
+   "deny": {
+    "required": false,
+    "settable": true
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "overwrite_id": {
+    "required": true,
+    "settable": true
+   },
+   "type": {
+    "required": true,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_forum_channel": {
+  "attributes": {
+   "category": {
+    "required": false,
+    "settable": true
+   },
+   "channel_id": {
+    "required": false,
+    "settable": false
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "nsfw": {
+    "required": false,
+    "settable": true
+   },
+   "position": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "sync_perms_with_category": {
+    "required": false,
+    "settable": true
+   },
+   "topic": {
+    "required": false,
+    "settable": true
+   },
+   "type": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_guild_sticker": {
+  "attributes": {
+   "description": {
+    "required": false,
+    "settable": true
+   },
+   "file": {
+    "required": true,
+    "settable": true
+   },
+   "format_type": {
+    "required": false,
+    "settable": false
+   },
+   "id": {
+    "required": false,
+    "settable": true
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "tags": {
+    "required": true,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_invite": {
+  "attributes": {
+   "channel_id": {
+    "required": true,
+    "settable": true
+   },
+   "code": {
+    "required": false,
+    "settable": false
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "max_age": {
+    "required": false,
+    "settable": true
+   },
+   "max_uses": {
+    "required": false,
+    "settable": true
+   },
+   "temporary": {
+    "required": false,
+    "settable": true
+   },
+   "unique": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_managed_server": {
+  "attributes": {
+   "afk_channel_id": {
+    "required": false,
+    "settable": true
+   },
+   "afk_timeout": {
+    "required": false,
+    "settable": true
+   },
+   "default_message_notifications": {
+    "required": false,
+    "settable": true
+   },
+   "description": {
+    "required": false,
+    "settable": true
+   },
+   "explicit_content_filter": {
+    "required": false,
+    "settable": true
+   },
+   "icon_data_uri": {
+    "required": false,
+    "settable": true
+   },
+   "icon_hash": {
+    "required": false,
+    "settable": false
+   },
+   "icon_url": {
+    "required": false,
+    "settable": true
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "name": {
+    "required": false,
+    "settable": true
+   },
+   "owner_id": {
+    "required": false,
+    "settable": true
+   },
+   "region": {
+    "required": false,
+    "settable": true
+   },
+   "roles": {
+    "required": false,
+    "settable": false
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "splash_data_uri": {
+    "required": false,
+    "settable": true
+   },
+   "splash_hash": {
+    "required": false,
+    "settable": false
+   },
+   "splash_url": {
+    "required": false,
+    "settable": true
+   },
+   "verification_level": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_member_roles": {
+  "attributes": {
+   "id": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "user_id": {
+    "required": true,
+    "settable": true
+   }
+  },
+  "block_types": [
+   "role"
+  ]
+ },
+ "discord_message": {
+  "attributes": {
+   "author": {
+    "required": false,
+    "settable": false
+   },
+   "channel_id": {
+    "required": true,
+    "settable": true
+   },
+   "content": {
+    "required": false,
+    "settable": true
+   },
+   "edited_timestamp": {
+    "required": false,
+    "settable": true
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "pinned": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": false,
+    "settable": false
+   },
+   "timestamp": {
+    "required": false,
+    "settable": false
+   },
+   "tts": {
+    "required": false,
+    "settable": true
+   },
+   "type": {
+    "required": false,
+    "settable": false
+   }
+  },
+  "block_types": [
+   "embed"
+  ]
+ },
+ "discord_news_channel": {
+  "attributes": {
+   "category": {
+    "required": false,
+    "settable": true
+   },
+   "channel_id": {
+    "required": false,
+    "settable": false
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "nsfw": {
+    "required": false,
+    "settable": true
+   },
+   "position": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "sync_perms_with_category": {
+    "required": false,
+    "settable": true
+   },
+   "topic": {
+    "required": false,
+    "settable": true
+   },
+   "type": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_role": {
+  "attributes": {
+   "color": {
+    "required": false,
+    "settable": true
+   },
+   "hoist": {
+    "required": false,
+    "settable": true
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "managed": {
+    "required": false,
+    "settable": false
+   },
+   "mentionable": {
+    "required": false,
+    "settable": true
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "permissions": {
+    "required": false,
+    "settable": true
+   },
+   "position": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_role_connection_metadata": {
+  "attributes": {
+   "application_id": {
+    "required": true,
+    "settable": true
+   },
+   "id": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": [
+   "metadata"
+  ]
+ },
+ "discord_role_everyone": {
+  "attributes": {
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "permissions": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_server": {
+  "attributes": {
+   "afk_channel_id": {
+    "required": false,
+    "settable": true
+   },
+   "afk_timeout": {
+    "required": false,
+    "settable": true
+   },
+   "default_message_notifications": {
+    "required": false,
+    "settable": true
+   },
+   "description": {
+    "required": false,
+    "settable": true
+   },
+   "explicit_content_filter": {
+    "required": false,
+    "settable": true
+   },
+   "icon_data_uri": {
+    "required": false,
+    "settable": true
+   },
+   "icon_hash": {
+    "required": false,
+    "settable": false
+   },
+   "icon_url": {
+    "required": false,
+    "settable": true
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "owner_id": {
+    "required": false,
+    "settable": true
+   },
+   "region": {
+    "required": false,
+    "settable": true
+   },
+   "roles": {
+    "required": false,
+    "settable": false
+   },
+   "server_id": {
+    "required": false,
+    "settable": false
+   },
+   "splash_data_uri": {
+    "required": false,
+    "settable": true
+   },
+   "splash_hash": {
+    "required": false,
+    "settable": false
+   },
+   "splash_url": {
+    "required": false,
+    "settable": true
+   },
+   "verification_level": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_server_onboarding": {
+  "attributes": {
+   "default_channel_ids": {
+    "required": true,
+    "settable": true
+   },
+   "enabled": {
+    "required": false,
+    "settable": true
+   },
+   "id": {
+    "required": false,
+    "settable": true
+   },
+   "mode": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   }
+  },
+  "block_types": [
+   "prompt"
+  ]
+ },
+ "discord_server_widget": {
+  "attributes": {
+   "channel_id": {
+    "required": false,
+    "settable": true
+   },
+   "enabled": {
+    "required": true,
+    "settable": true
+   },
+   "id": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_system_channel": {
+  "attributes": {
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "system_channel_flags": {
+    "required": false,
+    "settable": true
+   },
+   "system_channel_id": {
+    "required": true,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_text_channel": {
+  "attributes": {
+   "category": {
+    "required": false,
+    "settable": true
+   },
+   "channel_id": {
+    "required": false,
+    "settable": false
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "nsfw": {
+    "required": false,
+    "settable": true
+   },
+   "position": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "sync_perms_with_category": {
+    "required": false,
+    "settable": true
+   },
+   "topic": {
+    "required": false,
+    "settable": true
+   },
+   "type": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_voice_channel": {
+  "attributes": {
+   "bitrate": {
+    "required": false,
+    "settable": true
+   },
+   "category": {
+    "required": false,
+    "settable": true
+   },
+   "channel_id": {
+    "required": false,
+    "settable": false
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "position": {
+    "required": false,
+    "settable": true
+   },
+   "server_id": {
+    "required": true,
+    "settable": true
+   },
+   "sync_perms_with_category": {
+    "required": false,
+    "settable": true
+   },
+   "type": {
+    "required": false,
+    "settable": true
+   },
+   "user_limit": {
+    "required": false,
+    "settable": true
+   }
+  },
+  "block_types": []
+ },
+ "discord_webhook": {
+  "attributes": {
+   "avatar_data_uri": {
+    "required": false,
+    "settable": true
+   },
+   "avatar_hash": {
+    "required": false,
+    "settable": false
+   },
+   "avatar_url": {
+    "required": false,
+    "settable": true
+   },
+   "channel_id": {
+    "required": true,
+    "settable": true
+   },
+   "github_url": {
+    "required": false,
+    "settable": false
+   },
+   "id": {
+    "required": false,
+    "settable": false
+   },
+   "name": {
+    "required": true,
+    "settable": true
+   },
+   "slack_url": {
+    "required": false,
+    "settable": false
+   },
+   "token": {
+    "required": false,
+    "settable": false
+   },
+   "url": {
+    "required": false,
+    "settable": false
+   }
+  },
+  "block_types": []
+ }
+}

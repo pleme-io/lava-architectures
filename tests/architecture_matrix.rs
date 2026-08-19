@@ -527,3 +527,189 @@ fn every_pleme_io_category_is_reachable_by_some_role() {
          readable channel at all"
     );
 }
+
+/// Every attribute this architecture renders must actually exist on that
+/// resource, and every required one must be present.
+///
+/// lava renders whatever attribute name it is handed — it never checks the
+/// name against the provider's schema. So `:enable` instead of `:enabled`
+/// produced perfectly well-formed JSON that Discord's provider would have
+/// rejected at APPLY, with both "unsupported argument" and "missing required
+/// argument". That is exactly the failure a plan-time gate exists to move
+/// earlier, and it is how the real typo in this file was found.
+///
+/// The fixture is generated from lava-discord's schema.json, which magma read
+/// out of the provider binary:
+///
+///   python3 - <<'PY'  (see the generator in this repo's history)
+///   json.dump(...)  ->  tests/fixtures/discord-provider-attributes.json
+///
+/// Regenerate it whenever the provider version in lava-discord moves.
+#[test]
+fn pleme_io_server_attributes_conform_to_the_provider_schema() {
+    let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/discord-provider-attributes.json");
+    let schema: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&fixture).expect("fixture present"))
+            .expect("fixture parses");
+
+    let json = render_pleme_io_server();
+    let resources = json["resource"].as_object().expect("resources");
+
+    // Non-vacuity: this must actually be checking something.
+    assert!(resources.len() >= 13, "expected >=13 resource types, got {}", resources.len());
+    let mut checked = 0usize;
+
+    let mut problems: Vec<String> = Vec::new();
+    for (ty, instances) in resources {
+        let Some(known) = schema.get(ty) else {
+            problems.push(format!("{ty}: not a resource this provider ships"));
+            continue;
+        };
+        let attrs = known["attributes"].as_object().expect("attributes");
+        for (label, body) in instances.as_object().expect("instances") {
+            let rendered = body.as_object().expect("body");
+            for name in rendered.keys() {
+                checked += 1;
+                match attrs.get(name) {
+                    None => problems.push(format!(
+                        "{ty}.{label}: `{name}` is not an attribute of {ty}"
+                    )),
+                    Some(a) if !a["settable"].as_bool().unwrap_or(false) => problems.push(
+                        format!("{ty}.{label}: `{name}` is computed and cannot be set"),
+                    ),
+                    Some(_) => {}
+                }
+            }
+            for (name, a) in attrs {
+                if a["required"].as_bool().unwrap_or(false) && !rendered.contains_key(name) {
+                    problems.push(format!(
+                        "{ty}.{label}: required attribute `{name}` is missing"
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(checked >= 60, "only {checked} attributes checked — gate looks vacuous");
+    assert!(
+        problems.is_empty(),
+        "{} attribute problem(s) the provider would reject at apply:\n  - {}",
+        problems.len(),
+        problems.join("\n  - ")
+    );
+}
+
+/// Rendered strings must survive the parser byte-for-byte.
+///
+/// The pinned lava-eval reads string literals with a byte-to-char cast rather
+/// than a UTF-8 decode, so any multi-byte character is silently split into
+/// Latin-1 lookalikes. An em dash in the guild description rendered as
+/// `\u{e2}\u{80}\u{94}` — and that text would have become the server's actual
+/// description. Until lava moves to lava-eval 0.2, rendered values stay ASCII
+/// and this proves it.
+#[test]
+fn pleme_io_server_renders_no_mojibake() {
+    let json = render_pleme_io_server();
+    let text = serde_json::to_string(&json).expect("serialise");
+    assert!(
+        text.is_ascii(),
+        "a rendered value contains non-ASCII, which the pinned parser mangles"
+    );
+    // And the description specifically, since it is the one prose value that
+    // reaches Discord.
+    let desc = json["resource"]["discord_server"]["pleme-io"]["description"]
+        .as_str()
+        .expect("description rendered");
+    assert!(desc.is_ascii(), "guild description must be ASCII: {desc:?}");
+    assert!(desc.contains("pleme-io"), "description lost its content");
+}
+
+/// Completeness, as a gate rather than a claim.
+///
+/// Every settable attribute on the four GUILD-level resources is either set by
+/// the architecture or listed here with a reason. A new provider version that
+/// adds a guild setting fails this test until somebody decides about it —
+/// which is the only way "the complete set of settings" stays true after the
+/// day it was written.
+///
+/// Omissions are deliberate and each is a judgement, not an oversight:
+#[test]
+fn every_guild_level_setting_is_set_or_deliberately_omitted() {
+    // resource -> attribute -> why it is not set
+    let omitted: &[(&str, &str, &str)] = &[
+        ("discord_server", "icon_data_uri",
+         "no asset pipeline here; a placeholder would set a broken icon"),
+        ("discord_server", "icon_url",
+         "same, and mutually exclusive with icon_data_uri"),
+        ("discord_server", "splash_data_uri", "no asset pipeline"),
+        ("discord_server", "splash_url", "no asset pipeline"),
+        ("discord_server", "owner_id",
+         "computed: the bot owns a bot-created guild, and writing an owner \
+          here would assert something the API will not honour"),
+        ("discord_server", "region",
+         "deprecated by Discord — voice region moved to the channel"),
+    ];
+
+    let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/discord-provider-attributes.json");
+    let schema: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&fixture).expect("fixture"))
+            .expect("parses");
+    let json = render_pleme_io_server();
+
+    // The guild-level surface: the server itself and the three resources that
+    // configure it. Channels and roles are structure, not settings.
+    let guild_level = [
+        ("discord_server", "pleme-io"),
+        ("discord_system_channel", "system"),
+        ("discord_server_widget", "widget"),
+        ("discord_role_everyone", "everyone"),
+    ];
+
+    let mut unaccounted: Vec<String> = Vec::new();
+    let mut set_count = 0usize;
+    for (ty, label) in guild_level {
+        let attrs = schema[ty]["attributes"].as_object().expect("attrs");
+        let rendered = json["resource"][ty][label]
+            .as_object()
+            .unwrap_or_else(|| panic!("{ty}.{label} not rendered"));
+        for (name, a) in attrs {
+            if !a["settable"].as_bool().unwrap_or(false) {
+                continue;
+            }
+            // `id` is Terraform's own identifier, not a provider setting.
+            // Some resources declare it optional+computed, which makes it look
+            // settable to the schema check — but an author writing one would
+            // be asserting an id the provider is about to compute. Excluded by
+            // name rather than listed as an "omission", because calling it a
+            // decision would imply there was one to make.
+            if name == "id" {
+                continue;
+            }
+            if rendered.contains_key(name) {
+                set_count += 1;
+            } else if !omitted.iter().any(|(t, n, _)| *t == ty && n == name) {
+                unaccounted.push(format!("{ty}.{name}"));
+            }
+        }
+    }
+
+    assert!(set_count >= 14, "only {set_count} guild settings set — looks vacuous");
+    assert!(
+        unaccounted.is_empty(),
+        "{} guild setting(s) neither set nor explained — decide about each, \
+         then either set it or add it to `omitted` with a reason:\n  - {}",
+        unaccounted.len(),
+        unaccounted.join("\n  - ")
+    );
+
+    // Every omission must name a real attribute — a stale entry here would
+    // quietly excuse nothing while looking like diligence.
+    for (ty, name, _) in omitted {
+        assert!(
+            schema[ty]["attributes"].get(name).is_some(),
+            "omission list names {ty}.{name}, which the provider does not have"
+        );
+    }
+}

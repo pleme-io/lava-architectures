@@ -51,6 +51,39 @@
 ;;   MODERATE     = PARTICIPATE + MANAGE_MESSAGES                     = 126016
 ;;   VOICE        = VIEW_CHANNEL + CONNECT + SPEAK                   = 3146752
 ;;
+;; ── GUILD SETTINGS: COMPLETE, AND GATED ─────────────────────────
+;;
+;; Every settable attribute on the four guild-level resources -- the server
+;; itself, its system channel, its widget and @everyone -- is either set below
+;; or listed as a deliberate omission in
+;; `every_guild_level_setting_is_set_or_deliberately_omitted`. That test fails
+;; when a provider bump adds a guild setting nobody has decided about, which is
+;; the only way "complete" survives the day it was written.
+;;
+;; Set: name, description, verification-level, explicit-content-filter,
+;; default-message-notifications, afk-channel-id, afk-timeout (server);
+;; system-channel-id, system-channel-flags (system channel); enabled,
+;; channel-id (widget); permissions (@everyone).
+;;
+;; Omitted, each with its reason in that test: icon and splash (both spellings
+;; -- no asset pipeline, and a placeholder would set a broken image), owner-id
+;; (the bot owns a bot-created guild; writing an owner asserts what the API
+;; will not honour) and region (deprecated by Discord; voice region moved to
+;; the channel).
+;;
+;; ── RENDERED STRINGS ARE ASCII, DELIBERATELY ─────────────────────────
+;;
+;; The guild description uses "-" and not an em dash. The lava CLI pins
+;; lava-eval 0.1.10, whose string reader does `out.push(byte as char)` -- a
+;; byte-to-char cast, not a decode -- so every multi-byte character is split
+;; into its Latin-1 lookalikes. Measured: an em dash rendered as
+;; `\u00e2\u0080\u0094`, and "cafe" with an accent mangled the same way. That
+;; text would have become the SERVER'S ACTUAL DESCRIPTION.
+;;
+;; lava-eval 0.2.1 fixes it (its reader accumulates bytes and decodes once);
+;; this is the same stale pin that blocks onboarding. Comments are safe --
+;; they never reach the output -- so only rendered values are constrained.
+;;
 ;; ── WHAT THIS DOES NOT COVER ──────────────────────────────────────────
 ;;
 ;; The provider has no resource for automod, emojis, scheduled events,
@@ -78,7 +111,7 @@
 (deflava-interface pleme-io-server
   :doc "The pleme-io Discord server: roles, categories, channels, and the permission overwrites that decide who sees what."
   :inputs ((:name :type :string :default "pleme-io")
-    (:description :type :string :default "pleme-io — substrate, languages, platform, products.")
+    (:description :type :string :default "pleme-io - substrate, languages, platform, products.")
     (:substrate-channels :type (:list-of :string :min-items 1))
     (:languages-channels :type (:list-of :string :min-items 1))
     (:platform-channels :type (:list-of :string :min-items 1))
@@ -91,7 +124,7 @@
 
 (deflava-architecture pleme-io-server
   :inputs ((:name "pleme-io")
-    (:description "pleme-io — substrate, languages, platform, products.")
+    (:description "pleme-io - substrate, languages, platform, products.")
     (:substrate-channels ("magma" "lava" "sui" "nix"))
     (:languages-channels ("tatara-lisp" "blue"))
     (:platform-channels ("blackmatter" "camelot" "k8s"))
@@ -107,13 +140,26 @@
       "{name}"
       :description
       "{description}"
-      ;; 2 = members must have a verified email; the middle setting, and the
-      ;; one that keeps drive-by spam out without gating on phone numbers.
+      ;; 2 = scan every member's attachments, including those with a role.
+      ;; The stricter of the two real settings; 1 exempts role-holders, which
+      ;; is the wrong direction for a server that hands out roles freely.
       :explicit-content-filter
       2
       ;; 1 = only @mentions notify, so a busy #magma does not page everyone.
       :default-message-notifications
-      1)
+      1
+      ;; 2 = MEDIUM: account must be registered >5 minutes. 1 (verified email)
+      ;; stops nothing a throwaway cannot clear; 3 requires 10 minutes of
+      ;; membership and locks out someone invited to read one channel now.
+      :verification-level
+      2
+      ;; Idle voice users land here rather than lingering in a working
+      ;; channel. 3600s is the longest Discord allows -- shorter values evict
+      ;; people mid-pause during pairing, which is the common case here.
+      :afk-timeout
+      3600
+      :afk-channel-id
+      (ref discord-voice-channel "voice-general" id))
 
     ;; ── roles ───────────────────────────────────────────────────────
     ;; Position is REVERSE indexed: higher number is higher in the list and
@@ -481,12 +527,23 @@
       :server-id
       (ref discord-server "{name}" id)
       :system-channel-id
-      (ref discord-text-channel "welcome" id))
+      (ref discord-text-channel "welcome" id)
+      ;; 6 = SUPPRESS_PREMIUM_SUBSCRIPTIONS (1<<1) | SUPPRESS_GUILD_REMINDER
+      ;; _NOTIFICATIONS (1<<2). Boost announcements and Discord's own setup
+      ;; nags are noise in a working server; join notifications (1<<0) are
+      ;; deliberately NOT suppressed, because knowing who arrived is useful.
+      :system-channel-flags
+      6)
+    ;; `enabled`, not `enable`. This read `:enable` until a conformance check
+    ;; caught it: lava renders whatever attribute name it is given, so the
+    ;; typo produced valid-looking JSON that the provider would have rejected
+    ;; at APPLY with both "unsupported argument" and "missing required
+    ;; argument" -- the two failures a plan-time gate exists to prevent.
     (discord-server-widget
       "widget"
       :server-id
       (ref discord-server "{name}" id)
-      :enable
+      :enabled
       #t
       :channel-id
       (ref discord-text-channel "welcome" id))
