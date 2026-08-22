@@ -20,14 +20,28 @@
 ;; ownership — the rules would still apply, and a later destroy would
 ;; take the group with it.
 
+;; ── ★ PORTS ARE LITERALS, NOT INPUTS — and that is a LIMIT, not a taste ──
+;; A number written bare in this file (`22`) parses to Atom::Int and renders
+;; as JSON `22`, which is what terraform's own schema expects and what the
+;; parity oracle emits. A number arriving through an :input CANNOT do that:
+;; InputBindings carries `set_str` and `set_list` and nothing else, so
+;; `"{api-port}"` interpolates to the STRING "6443" no matter what is bound.
+;;
+;; So a parameterised port silently changes the rendered type. Terraform
+;; accepts both and applies identically, which is exactly why this is worth
+;; a comment rather than a bug report — it breaks byte-parity while breaking
+;; nothing an operator would ever notice.
+;;
+;; The destination is a numeric binding on InputBindings; until then, a port
+;; that must be a number is a literal here.
+
 (deflava-interface aws-sg-ingress-rules
   :doc "Ingress rules attached to a pre-existing, externally-owned security group"
   :inputs ((:name :type :string :required #t)
     (:security-group-id :type :string :required #t)
     (:operator-cidrs :type (:list-of :string) :required #t)
     (:ssh-description :type :string :required #t)
-    (:api-description :type :string :required #t)
-    (:api-port :type :string :default "6443"))
+    (:api-description :type :string :required #t))
   :outputs ((:security-group-id :type :string :required #t)
     (:cidr-count :type :string)))
 
@@ -36,17 +50,16 @@
     (:security-group-id "sg-placeholder")
     (:operator-cidrs ("203.0.113.0/32"))
     (:ssh-description "operator workstation — SSH")
-    (:api-description "operator workstation — K3s API")
-    (:api-port "6443"))
+    (:api-description "operator workstation — K3s API"))
 
   :resources ((aws-security-group-rule
      "{name}-ingress-ssh-0"
      :type
      "ingress"
      :from-port
-     "22"
+     22
      :to-port
-     "22"
+     22
      :protocol
      "tcp"
      :cidr-blocks
@@ -61,9 +74,9 @@
       :type
       "ingress"
       :from-port
-      "{api-port}"
+      6443
       :to-port
-      "{api-port}"
+      6443
       :protocol
       "tcp"
       :cidr-blocks
@@ -72,6 +85,15 @@
       "{security-group-id}"
       :description
       "{api-description}"))
+
+  ;; ★ :outputs, NOT :result — they are different clauses and only one of
+  ;; them reaches terraform. `:result` is for downstream consumers composing
+  ;; this architecture (lava-eval/src/eval.rs:154 skips it deliberately);
+  ;; `:outputs` is what populates Architecture.outputs and renders as a
+  ;; terraform `output` block. An architecture carrying only `:result` emits
+  ;; no outputs at all, and nothing complains.
+  :outputs (:k3s_origin_sg_id "{security-group-id}"
+    :operator_cidr_count 1)
 
   :result (sg-ingress-rules
     :security-group-id "{security-group-id}"
