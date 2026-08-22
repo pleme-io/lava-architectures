@@ -78,6 +78,7 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("akeyless-target-attested-infra", 2), // target + role
     ("cloudflare-domain", 2),            // zone + root
     ("cloudflare-dns-security", 3),      // dmarc + spf + dkim
+    ("aws-sg-ingress-rules", 2),         // ssh + api ingress on an externally-owned sg
     ("akeyless-dev-packer", 2),          // role + bucket
     ("akeyless-dev-workspace", 2),       // vpc + subnet
     ("azure-aks-cluster", 1),            // aks

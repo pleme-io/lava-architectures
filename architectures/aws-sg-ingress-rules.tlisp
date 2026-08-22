@@ -1,0 +1,78 @@
+;; aws-sg-ingress-rules.tlisp — ingress rules added to a security group
+;; this workspace does NOT own.
+;;
+;; ── ★ WHY THIS ARCHITECTURE HOLDS NO VALUES ───────────────────────────
+;; It was derived from a real private workspace whose rendered
+;; terraform.json is the parity oracle. That oracle carries a live AWS
+;; security-group id and an operator's home CIDR, and this repo is
+;; PUBLIC. So every such value is an :input — the structure ships here,
+;; the values stay in the private repo that supplies them.
+;;
+;; This is not incidental tidiness. A parity architecture is exactly the
+;; artifact most likely to be written by copying its oracle, and the
+;; oracle is the thing that must not travel.
+;;
+;; ── ★ THE SHAPE IT ENCODES ────────────────────────────────────────────
+;; "Adopt a group you don't own, then add rules to it" is a distinct and
+;; recurring posture: the group's lifecycle belongs elsewhere, so the id
+;; is an input rather than a (ref …), and destroying this workspace must
+;; not destroy the group. Modelling it as a ref would silently claim
+;; ownership — the rules would still apply, and a later destroy would
+;; take the group with it.
+
+(deflava-interface aws-sg-ingress-rules
+  :doc "Ingress rules attached to a pre-existing, externally-owned security group"
+  :inputs ((:name :type :string :required #t)
+    (:security-group-id :type :string :required #t)
+    (:operator-cidrs :type (:list-of :string) :required #t)
+    (:ssh-description :type :string :required #t)
+    (:api-description :type :string :required #t)
+    (:api-port :type :string :default "6443"))
+  :outputs ((:security-group-id :type :string :required #t)
+    (:cidr-count :type :string)))
+
+(deflava-architecture aws-sg-ingress-rules
+  :inputs ((:name "origin-sg")
+    (:security-group-id "sg-placeholder")
+    (:operator-cidrs ("203.0.113.0/32"))
+    (:ssh-description "operator workstation — SSH")
+    (:api-description "operator workstation — K3s API")
+    (:api-port "6443"))
+
+  :resources ((aws-security-group-rule
+     "{name}-ingress-ssh-0"
+     :type
+     "ingress"
+     :from-port
+     "22"
+     :to-port
+     "22"
+     :protocol
+     "tcp"
+     :cidr-blocks
+     "{operator-cidrs}"
+     :security-group-id
+     "{security-group-id}"
+     :description
+     "{ssh-description}")
+
+    (aws-security-group-rule
+      "{name}-ingress-api-0"
+      :type
+      "ingress"
+      :from-port
+      "{api-port}"
+      :to-port
+      "{api-port}"
+      :protocol
+      "tcp"
+      :cidr-blocks
+      "{operator-cidrs}"
+      :security-group-id
+      "{security-group-id}"
+      :description
+      "{api-description}"))
+
+  :result (sg-ingress-rules
+    :security-group-id "{security-group-id}"
+    :cidr-count "1"))

@@ -111,6 +111,24 @@ fn minimal_bindings(
                 bag.insert(k.to_string(), v.to_string());
             }
         }
+        // ★ Deliberately synthetic values. This architecture's parity oracle
+        // is a PRIVATE workspace carrying a live security-group id and an
+        // operator's home CIDR; the real differential runs where that data
+        // already lives. What belongs in this public matrix is proof the
+        // STRUCTURE renders, and nothing that identifies an environment.
+        "aws-sg-ingress-rules" => {
+            for (k, v) in [
+                ("name", "matrix"),
+                ("security-group-id", "sg-00000000000000000"),
+                ("ssh-description", "matrix operator — SSH"),
+                ("api-description", "matrix operator — K3s API"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+            b.set_list("operator-cidrs", vec!["203.0.113.0/32".into()]);
+            bag.insert("operator-cidrs".to_string(), "203.0.113.0/32".to_string());
+        }
         "aws-eks-cluster" => {
             for (k, v) in [("name", "matrix")] {
                 b.set_str(k, v);
