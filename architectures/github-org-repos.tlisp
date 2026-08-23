@@ -40,70 +40,92 @@
     (:labels ())
     (:repo_count "0"))
 
-  ;; ── ★ LABELS: repo x label, gated per repo ──────────────────────────
-  ;; A nested for-each, because the outer loop's scoped Env carries the
-  ;; inner list through — so the cross product needs no new construct.
-  ;;
-  ;; `label_slug` is a FIELD rather than something computed here: the Ruby
-  ;; forms the resource name with `l[:name].tr(' ', '-')`, and lava has no
-  ;; string transforms. Passing the slug pre-computed keeps the address
-  ;; identical to the Ruby's without teaching the evaluator to mangle text —
-  ;; which is the right split, since a resource ADDRESS changing is a
-  ;; destroy-and-recreate, not a cosmetic diff.
-  ;;
-  ;; `repository` is a typed (ref …), not the bare name string. That edge is
-  ;; what puts the label AFTER its repo in magma's apply DAG; a literal
-  ;; would let a label sort first and POST to a repo that does not exist yet.
-  :resources ((for-each ((i repo) (enumerate repos))
-     (for-each ((j label) (enumerate labels))
-       (github-issue-label
-         "{repo_name}-label-{label_slug}"
-         :when
-         "{repo_standard_labels}"
-         :repository
-         (ref github-repository "{repo_name}" name)
-         :name
-         "{label_name}"
-         :color
-         "{label_color}"
-         :description
-         "{label_description}")))
+  :resources (
+    ;; The repository itself.
+    (for-each ((i repo) (enumerate repos))
+      (github-repository
+        "{repo_name}"
+        :name "{repo_name}"
+        :description "{repo_description}"
+        :visibility "{repo_visibility}"
+        :has_issues "{repo_has_issues}"
+        :archived "{repo_archived}"
+        :delete_branch_on_merge "{repo_delete_branch_on_merge}"))
 
-    ;; ── ★ ACTIONS PERMISSIONS ─────────────────────────────────────────
-    ;; The Ruby pairs this if/else with no third path deliberately — a repo
-    ;; either gets permissions declaring Actions ON, or gets them declaring
-    ;; it OFF. Emitting nothing for the off case would leave the live
-    ;; setting unmanaged, which reads as "we do not care" rather than "we
-    ;; want it off".
+    ;; ── ★ LABELS: repo x label, gated per repo ─────────────────────────
+    ;; A NESTED for-each — the outer loop's scoped Env carries the inner
+    ;; list through, so the cross product needed no new construct.
+    ;;
+    ;; `label_slug` is a FIELD, not computed here: the Ruby forms the address
+    ;; with l[:name].tr(' ', '-') and lava has no string transforms. Passing
+    ;; it pre-formed keeps the address byte-identical — and a resource
+    ;; ADDRESS changing is a destroy-and-recreate, not a cosmetic diff.
+    ;;
+    ;; `repository` is a typed (ref …), never the bare name. That edge orders
+    ;; the label after its repo in magma's apply DAG; a literal lets a label
+    ;; sort first and POST to a repo that does not exist yet.
+    (for-each ((i repo) (enumerate repos))
+      (for-each ((j label) (enumerate labels))
+        (github-issue-label
+          "{repo_name}-label-{label_slug}"
+          :when "{repo_standard_labels}"
+          :repository (ref github-repository "{repo_name}" name)
+          :name "{label_name}"
+          :color "{label_color}"
+          :description "{label_description}")))
+
+    ;; ── ★ ACTIONS PERMISSIONS ──────────────────────────────────────────
+    ;; Emitted for EVERY repo, matching the Ruby's deliberate if/else with no
+    ;; third path: a repo either declares Actions on or declares it off.
+    ;; Emitting nothing for the off case leaves the live setting unmanaged,
+    ;; which reads as "we do not care" rather than "we want it off".
     (for-each ((i repo) (enumerate repos))
       (github-actions-repository-permissions
         "{repo_name}_actions"
-        :repository
-        (ref github-repository "{repo_name}" name)
-        :enabled
-        "{repo_actions_enabled}"
-        :allowed_actions
-        "all"))
+        :repository (ref github-repository "{repo_name}" name)
+        :enabled "{repo_actions_enabled}"
+        :allowed_actions "all"))
 
+    ;; ── ★ CI SHIM ──────────────────────────────────────────────────────
+    ;; Path and content arrive as FIELDS. The Ruby generates the workflow body
+    ;; from a template keyed on ci_shim's value (ruby_gem / rust_pkg /
+    ;; rust_workspace); rendering it here would mean a second copy of that
+    ;; generator, free to diverge, with the divergence showing up as a
+    ;; workflow that runs and does the wrong thing.
     (for-each ((i repo) (enumerate repos))
-     (github-repository
-       "{repo_name}"
-       :name
-       "{repo_name}"
-       :description
-       "{repo_description}"
-       :visibility
-       "{repo_visibility}"
-       ;; Merge flags travel as their own fields rather than being defaulted
-       ;; here: org.yaml carries them per repo, and a default in the renderer
-       ;; would silently disagree with the catalogue for any repo that set
-       ;; them differently.
-       :has_issues
-       "{repo_has_issues}"
-       :archived
-       "{repo_archived}"
-       :delete_branch_on_merge
-       "{repo_delete_branch_on_merge}")))
+      (github-repository-file
+        "{repo_name}__{repo_ci_shim_slug}"
+        :when "{repo_has_ci_shim}"
+        :repository (ref github-repository "{repo_name}" name)
+        :file "{repo_ci_shim_path}"
+        :content "{repo_ci_shim_content}"
+        :overwrite_on_create #t))
+
+    ;; ── ★ BRANCH PROTECTION ────────────────────────────────────────────
+    ;; The profile's resolved fields arrive per row rather than being looked
+    ;; up here: PROFILES lives in the gem, and a second copy of a policy
+    ;; table is a policy that silently diverges.
+    (for-each ((i repo) (enumerate repos))
+      (github-branch-protection
+        "{repo_name}_protection"
+        :when "{repo_has_branch_protection}"
+        :repository_id (ref github-repository "{repo_name}" node_id)
+        :pattern "{repo_default_branch}"
+        :required_status_checks_strict "{repo_bp_strict}"
+        :enforce_admins "{repo_bp_enforce_admins}"))
+
+    ;; ── ★ ADOPT-NOT-CREATE ─────────────────────────────────────────────
+    ;; An import per repo that ALREADY EXISTS. Without these the plan proposes
+    ;; CREATE for a live estate and fails at apply with 422 per repo — a plan
+    ;; that reads as reasonable right up until it runs.
+    ;;
+    ;; `repo_exists_on_github` is a fact about the WORLD, so the caller
+    ;; resolves it and it arrives as a field. lava cannot and should not look.
+    (for-each ((i repo) (enumerate repos))
+      (import
+        "github_repository.{repo_name}"
+        "{repo_name}"
+        :when "{repo_exists_on_github}")))
 
   :outputs (:repo_count "{repo_count}")
   :result (github-org-repos :repo-count "{repo_count}"))
