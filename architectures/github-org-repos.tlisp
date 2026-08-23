@@ -30,15 +30,62 @@
   :doc "Repository posture for a GitHub org, one row per catalogued repo"
   :inputs ((:owner :type :string :required #t)
     (:repos :type (:list-of :string) :required #t)
+    (:labels :type (:list-of :string) :required #t)
     (:repo-count :type :string :default "0"))
   :outputs ((:repo-count :type :string)))
 
 (deflava-architecture github-org-repos
   :inputs ((:owner "pleme-io")
     (:repos ())
+    (:labels ())
     (:repo_count "0"))
 
+  ;; ── ★ LABELS: repo x label, gated per repo ──────────────────────────
+  ;; A nested for-each, because the outer loop's scoped Env carries the
+  ;; inner list through — so the cross product needs no new construct.
+  ;;
+  ;; `label_slug` is a FIELD rather than something computed here: the Ruby
+  ;; forms the resource name with `l[:name].tr(' ', '-')`, and lava has no
+  ;; string transforms. Passing the slug pre-computed keeps the address
+  ;; identical to the Ruby's without teaching the evaluator to mangle text —
+  ;; which is the right split, since a resource ADDRESS changing is a
+  ;; destroy-and-recreate, not a cosmetic diff.
+  ;;
+  ;; `repository` is a typed (ref …), not the bare name string. That edge is
+  ;; what puts the label AFTER its repo in magma's apply DAG; a literal
+  ;; would let a label sort first and POST to a repo that does not exist yet.
   :resources ((for-each ((i repo) (enumerate repos))
+     (for-each ((j label) (enumerate labels))
+       (github-issue-label
+         "{repo_name}-label-{label_slug}"
+         :when
+         "{repo_standard_labels}"
+         :repository
+         (ref github-repository "{repo_name}" name)
+         :name
+         "{label_name}"
+         :color
+         "{label_color}"
+         :description
+         "{label_description}")))
+
+    ;; ── ★ ACTIONS PERMISSIONS ─────────────────────────────────────────
+    ;; The Ruby pairs this if/else with no third path deliberately — a repo
+    ;; either gets permissions declaring Actions ON, or gets them declaring
+    ;; it OFF. Emitting nothing for the off case would leave the live
+    ;; setting unmanaged, which reads as "we do not care" rather than "we
+    ;; want it off".
+    (for-each ((i repo) (enumerate repos))
+      (github-actions-repository-permissions
+        "{repo_name}_actions"
+        :repository
+        (ref github-repository "{repo_name}" name)
+        :enabled
+        "{repo_actions_enabled}"
+        :allowed_actions
+        "all"))
+
+    (for-each ((i repo) (enumerate repos))
      (github-repository
        "{repo_name}"
        :name
