@@ -1,0 +1,62 @@
+;; github-org-repos.tlisp — the org's repository posture, one resource set
+;; per catalogued repo.
+;;
+;; ── ★ WHAT THIS REPLACES, AND THE ONE THING IT DELIBERATELY DOES NOT ──
+;; The Ruby renderer this ports (pangea-architectures'
+;; github_org_workspace.rb + open_source_repo.rb) does two separable jobs:
+;;
+;;   1. RESOLVE — read org.yaml, then CALL THE GITHUB API at synthesis time
+;;      (_existing_repos, _live_visibility, _gh_get) to decide adopt-vs-create
+;;      and to learn each repo's live visibility.
+;;   2. RENDER — turn each resolved row into terraform resources.
+;;
+;; Only (2) belongs here. lava is a pure evaluator with no I/O, and that is a
+;; property worth keeping rather than a limitation to work around: an
+;; architecture that can reach the network is one whose output depends on when
+;; you rendered it, which is the opposite of what a plan is for.
+;;
+;; So the resolution stays with the caller — which already holds a credential
+;; and already does API work — and its ANSWERS arrive here as ordinary record
+;; fields (`repo_exists_on_github`, `repo_live_visibility`). The split is the
+;; point: I/O where the credentials are, rendering where it is reproducible.
+;;
+;; ── ★ WHY RECORDS ─────────────────────────────────────────────────────
+;; A repo is not a string. Before lava-eval gained record iteration this shape
+;; had no representation at all — `for-each` bound an item and its index and
+;; could not reach a second list, so the only encodings were parallel lists
+;; (inexpressible) or a delimited blob (making this file parse its own input).
+
+(deflava-interface github-org-repos
+  :doc "Repository posture for a GitHub org, one row per catalogued repo"
+  :inputs ((:owner :type :string :required #t)
+    (:repos :type (:list-of :string) :required #t)
+    (:repo-count :type :string :default "0"))
+  :outputs ((:repo-count :type :string)))
+
+(deflava-architecture github-org-repos
+  :inputs ((:owner "pleme-io")
+    (:repos ())
+    (:repo_count "0"))
+
+  :resources ((for-each ((i repo) (enumerate repos))
+     (github-repository
+       "{repo_name}"
+       :name
+       "{repo_name}"
+       :description
+       "{repo_description}"
+       :visibility
+       "{repo_visibility}"
+       ;; Merge flags travel as their own fields rather than being defaulted
+       ;; here: org.yaml carries them per repo, and a default in the renderer
+       ;; would silently disagree with the catalogue for any repo that set
+       ;; them differently.
+       :has_issues
+       "{repo_has_issues}"
+       :archived
+       "{repo_archived}"
+       :delete_branch_on_merge
+       "{repo_delete_branch_on_merge}")))
+
+  :outputs (:repo_count "{repo_count}")
+  :result (github-org-repos :repo-count "{repo_count}"))

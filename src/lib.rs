@@ -79,6 +79,7 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("cloudflare-domain", 2),            // zone + root
     ("cloudflare-dns-security", 3),      // dmarc + spf + dkim
     ("aws-sg-ingress-rules", 2),         // ssh + api ingress on an externally-owned sg
+    ("github-org-repos", 1),             // one resource set per catalogued repo
     ("akeyless-dev-packer", 2),          // role + bucket
     ("akeyless-dev-workspace", 2),       // vpc + subnet
     ("azure-aks-cluster", 1),            // aks
