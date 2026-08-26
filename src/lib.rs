@@ -35,8 +35,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub use lava_core::{Architecture, ResourceRef, Value};
 pub use lava_eval::{
-    eval_architecture, eval_architecture_with_schema, interfaces_in_source, parse, Atom,
-    EvalError, InputBindings, InterfaceParseError, ParseError, Sx,
+    Atom, EvalError, InputBindings, InterfaceParseError, ParseError, Sx, eval_architecture,
+    eval_architecture_with_schema, interfaces_in_source, parse,
 };
 pub use lava_schema::{Field, Interface, SchemaError};
 pub use lava_types::Type;
@@ -48,37 +48,37 @@ pub use lava_types::Type;
 ///
 /// Each entry: `(architecture-name, expected-minimum-resource-count)`.
 pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
-    ("aws-vpc-network", 10),       // 1 vpc + 1 igw + 3 public + 3 private + 1 eip + 1 nat + 1 sg
+    ("aws-vpc-network", 10), // 1 vpc + 1 igw + 3 public + 3 private + 1 eip + 1 nat + 1 sg
     ("cloudflare-dns-records", 5), // root + www + api + wildcard + acme
     ("discord-server-baseline", 3), // moderator role + category + text channel
     ("pleme-io-server", 44), // the whole server: 13 resource types, 44 resources
-    ("akeyless-secrets", 6),       // ci_auth + k8s_auth + db_pwd + api_key + db_target + role
-    ("cloudflare-r2-bucket", 4),   // bucket + cors + custom-domain + cname
-    ("public-dns", 6),             // zone + kms + ksk + dnssec + log-group + query-log
-    ("akeyless-platform", 8),      // acm + validation + complete + 3 svc cnames + role + attach
-    ("cloudflare-tunnel", 3),      // tunnel + config + cname (cname conditional via :when)
-    ("cloudflare-zone", 2),        // zone + settings-override
-    ("aws-eks-cluster", 4),        // cluster role + node role + cluster + node-group
-    ("split-horizon-dns", 4),      // 2 zones + 2 apex records
-    ("dns-record-set", 2),         // apex + www records
-    ("cilium-irsa", 3),            // role + policy + attachment
+    ("akeyless-secrets", 6), // ci_auth + k8s_auth + db_pwd + api_key + db_target + role
+    ("cloudflare-r2-bucket", 4), // bucket + cors + custom-domain + cname
+    ("public-dns", 6),       // zone + kms + ksk + dnssec + log-group + query-log
+    ("akeyless-platform", 8), // acm + validation + complete + 3 svc cnames + role + attach
+    ("cloudflare-tunnel", 3), // tunnel + config + cname (cname conditional via :when)
+    ("cloudflare-zone", 2),  // zone + settings-override
+    ("aws-eks-cluster", 4),  // cluster role + node role + cluster + node-group
+    ("split-horizon-dns", 4), // 2 zones + 2 apex records
+    ("dns-record-set", 2),   // apex + www records
+    ("cilium-irsa", 3),      // role + policy + attachment
     ("cluster-autoscaler-iam", 2), // role + inline policy
-    ("backup-recovery", 3),        // vault + plan + selection
-    ("ami-production-iam", 3),     // role + policy attachment + instance profile
+    ("backup-recovery", 3),  // vault + plan + selection
+    ("ami-production-iam", 3), // role + policy attachment + instance profile
     ("cloudflare-tunnel-ingress", 3), // tunnel + 2 cnames
-    ("cloudflare-headless-blog", 3),  // bucket + worker + workers-domain
-    ("akeyless-aws-integration", 3),  // aws-target + dynamic-secret + bridge role
-    ("convergence-dashboard", 4),     // dashboard + 3 monitors
-    ("drill-network", 3),             // vpc + subnet + sg
+    ("cloudflare-headless-blog", 3), // bucket + worker + workers-domain
+    ("akeyless-aws-integration", 3), // aws-target + dynamic-secret + bridge role
+    ("convergence-dashboard", 4), // dashboard + 3 monitors
+    ("drill-network", 3),    // vpc + subnet + sg
     ("cloudflare-zero-trust-access", 2), // app + policy
-    ("akeyless-dev-cluster", 2),         // eks + node-role
-    ("ami-test-iam", 2),                 // role + ssm attach
-    ("drill-iam-role", 2),               // role + inline policy
-    ("continuous-monitoring", 3),        // log-group + alarm + sns
+    ("akeyless-dev-cluster", 2), // eks + node-role
+    ("ami-test-iam", 2),     // role + ssm attach
+    ("drill-iam-role", 2),   // role + inline policy
+    ("continuous-monitoring", 3), // log-group + alarm + sns
     ("akeyless-target-attested-infra", 2), // target + role
-    ("cloudflare-domain", 2),            // zone + root
-    ("cloudflare-dns-security", 3),      // dmarc + spf + dkim
-    ("aws-sg-ingress-rules", 2),         // ssh + api ingress on an externally-owned sg
+    ("cloudflare-domain", 2), // zone + root
+    ("cloudflare-dns-security", 3), // dmarc + spf + dkim
+    ("aws-sg-ingress-rules", 2), // ssh + api ingress on an externally-owned sg
     // 5 for ONE repo with every predicate true: repository + issue-label +
     // actions-permissions + repository-file + branch-protection. A floor of 1
     // would have passed while four of the five families were skipped — the
@@ -399,10 +399,22 @@ mod integration_tests {
         let json = arch.render_terraform_json().unwrap();
 
         // VPC — pangea spec line 22-26.
-        assert_eq!(json["resource"]["aws_vpc"]["main-vpc"]["cidr_block"], "10.0.0.0/16");
-        assert_eq!(json["resource"]["aws_vpc"]["main-vpc"]["enable_dns_support"], true);
-        assert_eq!(json["resource"]["aws_vpc"]["main-vpc"]["enable_dns_hostnames"], true);
-        assert_eq!(json["resource"]["aws_vpc"]["main-vpc"]["tags"]["Name"], "main-vpc");
+        assert_eq!(
+            json["resource"]["aws_vpc"]["main-vpc"]["cidr_block"],
+            "10.0.0.0/16"
+        );
+        assert_eq!(
+            json["resource"]["aws_vpc"]["main-vpc"]["enable_dns_support"],
+            true
+        );
+        assert_eq!(
+            json["resource"]["aws_vpc"]["main-vpc"]["enable_dns_hostnames"],
+            true
+        );
+        assert_eq!(
+            json["resource"]["aws_vpc"]["main-vpc"]["tags"]["Name"],
+            "main-vpc"
+        );
         assert_eq!(
             json["resource"]["aws_vpc"]["main-vpc"]["tags"]["Environment"],
             "production"
@@ -418,8 +430,7 @@ mod integration_tests {
         for i in 0..3 {
             let name = format!("main-public-{i}");
             assert_eq!(
-                json["resource"]["aws_subnet"][&name]["vpc_id"],
-                "${aws_vpc.main-vpc.id}",
+                json["resource"]["aws_subnet"][&name]["vpc_id"], "${aws_vpc.main-vpc.id}",
                 "public subnet {i} vpc_id"
             );
             assert_eq!(
@@ -428,8 +439,7 @@ mod integration_tests {
                 "public subnet {i} cidr"
             );
             assert_eq!(
-                json["resource"]["aws_subnet"][&name]["map_public_ip_on_launch"],
-                true,
+                json["resource"]["aws_subnet"][&name]["map_public_ip_on_launch"], true,
                 "public subnet {i} map_public_ip"
             );
         }
@@ -438,8 +448,7 @@ mod integration_tests {
         for i in 0..3 {
             let name = format!("main-private-{i}");
             assert_eq!(
-                json["resource"]["aws_subnet"][&name]["vpc_id"],
-                "${aws_vpc.main-vpc.id}",
+                json["resource"]["aws_subnet"][&name]["vpc_id"], "${aws_vpc.main-vpc.id}",
                 "private subnet {i} vpc_id"
             );
             assert_eq!(
@@ -545,7 +554,9 @@ mod integration_tests {
                 interface, errors, ..
             } => {
                 assert_eq!(interface, "cloudflare-dns-records");
-                assert!(errors.iter().any(|e| matches!(e, SchemaError::MissingRequired { name, .. } if name == "zone-id")));
+                assert!(errors.iter().any(
+                    |e| matches!(e, SchemaError::MissingRequired { name, .. } if name == "zone-id")
+                ));
             }
             other => panic!("expected EvalError::Schema, got {other:?}"),
         }
@@ -578,7 +589,10 @@ mod integration_tests {
     fn user_inputs_override_defaults_in_tlisp_eval() {
         let mut b = InputBindings::new();
         b.set_str("name", "preview");
-        b.set_list("availability-zones", vec!["us-west-2a".into(), "us-west-2b".into()]);
+        b.set_list(
+            "availability-zones",
+            vec!["us-west-2a".into(), "us-west-2b".into()],
+        );
         let arch = load_bundled("aws-vpc-network", &b).unwrap();
         let json = arch.render_terraform_json().unwrap();
 

@@ -39,7 +39,11 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
         ),
         (
             "homeostasis-control",
-            BTreeMap::from([("env", "camelot"), ("board", "homeostasis-control"), ("datasource", "mimir")]),
+            BTreeMap::from([
+                ("env", "camelot"),
+                ("board", "homeostasis-control"),
+                ("datasource", "mimir"),
+            ]),
         ),
         (
             "nervous-system-self-health",
@@ -143,7 +147,10 @@ fn every_catalogue_entry_renders_to_grafana_json() {
         match render_dashboard_grafana_json(&src, &Theme::tundra()) {
             Ok(json) => {
                 if json["schemaVersion"] != 39 {
-                    failures.push(format!("{name}: schemaVersion is {}", json["schemaVersion"]));
+                    failures.push(format!(
+                        "{name}: schemaVersion is {}",
+                        json["schemaVersion"]
+                    ));
                 }
                 if json["uid"].as_str().unwrap_or_default().is_empty() {
                     failures.push(format!("{name}: rendered without a uid"));
@@ -213,7 +220,10 @@ fn every_catalogue_file_has_a_row() {
     );
 
     let rows: Vec<&str> = catalogue().into_iter().map(|(n, _)| n).collect();
-    let missing: Vec<&String> = on_disk.iter().filter(|f| !rows.contains(&f.as_str())).collect();
+    let missing: Vec<&String> = on_disk
+        .iter()
+        .filter(|f| !rows.contains(&f.as_str()))
+        .collect();
     assert!(
         missing.is_empty(),
         "catalogue files with no matrix row: {missing:?} (add them to catalogue() in this file)"
@@ -256,8 +266,7 @@ fn declared_datasources_and_query_references_agree() {
                     if let Some(targets) = m.get("targets").and_then(|t| t.as_array()) {
                         for t in targets {
                             *queries += 1;
-                            if let Some(uid) =
-                                t.pointer("/datasource/uid").and_then(|u| u.as_str())
+                            if let Some(uid) = t.pointer("/datasource/uid").and_then(|u| u.as_str())
                             {
                                 used.insert(uid.to_string());
                             }

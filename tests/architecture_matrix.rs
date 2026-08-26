@@ -22,7 +22,7 @@
 
 use indexmap::IndexMap;
 use lava_architectures::{
-    eval_architecture, interface_for, BUNDLED_ARCHITECTURES, ARCHITECTURE_DIR,
+    ARCHITECTURE_DIR, BUNDLED_ARCHITECTURES, eval_architecture, interface_for,
 };
 use lava_eval::InputBindings;
 
@@ -47,9 +47,7 @@ fn count_resources(json: &serde_json::Value) -> usize {
 /// The bag projection matches what lava-runtime feeds to
 /// `Interface::validate_inputs` — kept here so the matrix doesn't
 /// need to depend on lava-runtime.
-fn minimal_bindings(
-    arch_name: &str,
-) -> (InputBindings, IndexMap<String, String>) {
+fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>) {
     let mut b = InputBindings::new();
     let mut bag: IndexMap<String, String> = IndexMap::new();
     match arch_name {
@@ -122,7 +120,11 @@ fn minimal_bindings(
             // record-valued input is absent from the latter and the interface
             // rejects the architecture as missing a required input — even
             // though it just rendered correctly. Both views must be fed.
-            for (k, v) in [("repos", "matrix-repo"), ("labels", "bug"), ("repo-count", "1")] {
+            for (k, v) in [
+                ("repos", "matrix-repo"),
+                ("labels", "bug"),
+                ("repo-count", "1"),
+            ] {
                 bag.insert(k.to_string(), v.to_string());
             }
         }
@@ -201,7 +203,10 @@ fn minimal_bindings(
                 bag.insert(k.to_string(), v.to_string());
             }
             b.set_list("subnet-ids", vec!["subnet-aaa".into(), "subnet-bbb".into()]);
-            bag.insert("subnet-ids".to_string(), "subnet-aaa,subnet-bbb".to_string());
+            bag.insert(
+                "subnet-ids".to_string(),
+                "subnet-aaa,subnet-bbb".to_string(),
+            );
         }
         "split-horizon-dns" => {
             for (k, v) in [
@@ -334,10 +339,19 @@ fn minimal_bindings(
             // floor down to a number that understates the real server by nine
             // channels.
             for (k, vs) in [
-                ("substrate-channels", ["magma", "lava", "sui", "nix"].as_slice()),
+                (
+                    "substrate-channels",
+                    ["magma", "lava", "sui", "nix"].as_slice(),
+                ),
                 ("languages-channels", ["tatara-lisp", "blue"].as_slice()),
-                ("platform-channels", ["blackmatter", "camelot", "k8s"].as_slice()),
-                ("products-channels", ["mado", "hiroba", "gpu-apps"].as_slice()),
+                (
+                    "platform-channels",
+                    ["blackmatter", "camelot", "k8s"].as_slice(),
+                ),
+                (
+                    "products-channels",
+                    ["mado", "hiroba", "gpu-apps"].as_slice(),
+                ),
                 ("ops-channels", ["alerts", "releases"].as_slice()),
                 ("voice-channels", ["general", "pairing"].as_slice()),
             ] {
@@ -370,7 +384,10 @@ fn every_bundled_architecture_passes_the_matrix() {
         let src = match std::fs::read_to_string(&path) {
             Ok(s) => s,
             Err(e) => {
-                failures.push(format!("{name}: missing source ({e}) at {}", path.display()));
+                failures.push(format!(
+                    "{name}: missing source ({e}) at {}",
+                    path.display()
+                ));
                 continue;
             }
         };
@@ -468,15 +485,13 @@ fn matrix_covers_every_architecture_file_on_disk() {
 fn every_bundled_architecture_has_a_registered_interface() {
     let unregistered: Vec<&str> = BUNDLED_ARCHITECTURES
         .iter()
-        .filter_map(
-            |(name, _)| {
-                if interface_for(name).is_none() {
-                    Some(*name)
-                } else {
-                    None
-                }
-            },
-        )
+        .filter_map(|(name, _)| {
+            if interface_for(name).is_none() {
+                Some(*name)
+            } else {
+                None
+            }
+        })
         .collect();
     assert!(
         unregistered.is_empty(),
@@ -523,8 +538,7 @@ fn pleme_io_server_permission_bits_are_correct() {
     const ADMINISTRATOR: u64 = 1 << 3;
 
     let read_only = VIEW_CHANNEL | READ_MESSAGE_HISTORY;
-    let participate =
-        read_only | SEND_MESSAGES | ADD_REACTIONS | EMBED_LINKS | ATTACH_FILES;
+    let participate = read_only | SEND_MESSAGES | ADD_REACTIONS | EMBED_LINKS | ATTACH_FILES;
     let moderate = participate | MANAGE_MESSAGES;
     let voice = VIEW_CHANNEL | CONNECT | SPEAK;
 
@@ -641,7 +655,11 @@ fn pleme_io_server_attributes_conform_to_the_provider_schema() {
     let resources = json["resource"].as_object().expect("resources");
 
     // Non-vacuity: this must actually be checking something.
-    assert!(resources.len() >= 13, "expected >=13 resource types, got {}", resources.len());
+    assert!(
+        resources.len() >= 13,
+        "expected >=13 resource types, got {}",
+        resources.len()
+    );
     let mut checked = 0usize;
 
     let mut problems: Vec<String> = Vec::new();
@@ -659,9 +677,9 @@ fn pleme_io_server_attributes_conform_to_the_provider_schema() {
                     None => problems.push(format!(
                         "{ty}.{label}: `{name}` is not an attribute of {ty}"
                     )),
-                    Some(a) if !a["settable"].as_bool().unwrap_or(false) => problems.push(
-                        format!("{ty}.{label}: `{name}` is computed and cannot be set"),
-                    ),
+                    Some(a) if !a["settable"].as_bool().unwrap_or(false) => problems.push(format!(
+                        "{ty}.{label}: `{name}` is computed and cannot be set"
+                    )),
                     Some(_) => {}
                 }
             }
@@ -675,7 +693,10 @@ fn pleme_io_server_attributes_conform_to_the_provider_schema() {
         }
     }
 
-    assert!(checked >= 60, "only {checked} attributes checked — gate looks vacuous");
+    assert!(
+        checked >= 60,
+        "only {checked} attributes checked — gate looks vacuous"
+    );
     assert!(
         problems.is_empty(),
         "{} attribute problem(s) the provider would reject at apply:\n  - {}",
@@ -722,24 +743,35 @@ fn pleme_io_server_renders_no_mojibake() {
 fn every_guild_level_setting_is_set_or_deliberately_omitted() {
     // resource -> attribute -> why it is not set
     let omitted: &[(&str, &str, &str)] = &[
-        ("discord_server", "icon_data_uri",
-         "no asset pipeline here; a placeholder would set a broken icon"),
-        ("discord_server", "icon_url",
-         "same, and mutually exclusive with icon_data_uri"),
+        (
+            "discord_server",
+            "icon_data_uri",
+            "no asset pipeline here; a placeholder would set a broken icon",
+        ),
+        (
+            "discord_server",
+            "icon_url",
+            "same, and mutually exclusive with icon_data_uri",
+        ),
         ("discord_server", "splash_data_uri", "no asset pipeline"),
         ("discord_server", "splash_url", "no asset pipeline"),
-        ("discord_server", "owner_id",
-         "computed: the bot owns a bot-created guild, and writing an owner \
-          here would assert something the API will not honour"),
-        ("discord_server", "region",
-         "deprecated by Discord — voice region moved to the channel"),
+        (
+            "discord_server",
+            "owner_id",
+            "computed: the bot owns a bot-created guild, and writing an owner \
+          here would assert something the API will not honour",
+        ),
+        (
+            "discord_server",
+            "region",
+            "deprecated by Discord — voice region moved to the channel",
+        ),
     ];
 
     let fixture = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/discord-provider-attributes.json");
     let schema: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(&fixture).expect("fixture"))
-            .expect("parses");
+        serde_json::from_str(&std::fs::read_to_string(&fixture).expect("fixture")).expect("parses");
     let json = render_pleme_io_server();
 
     // The guild-level surface: the server itself and the three resources that
@@ -779,7 +811,10 @@ fn every_guild_level_setting_is_set_or_deliberately_omitted() {
         }
     }
 
-    assert!(set_count >= 14, "only {set_count} guild settings set — looks vacuous");
+    assert!(
+        set_count >= 14,
+        "only {set_count} guild settings set — looks vacuous"
+    );
     assert!(
         unaccounted.is_empty(),
         "{} guild setting(s) neither set nor explained — decide about each, \

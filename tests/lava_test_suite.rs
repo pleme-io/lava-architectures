@@ -3,9 +3,9 @@
 //! ★★ CLOSED-LOOP MASS-SYNTHESIS into one assertion report.
 
 use indexmap::IndexMap;
-use lava_architectures::{eval_architecture, ARCHITECTURE_DIR};
+use lava_architectures::{ARCHITECTURE_DIR, eval_architecture};
 use lava_eval::InputBindings;
-use lava_test::{run_case_against, tests_in_source, AssertContext};
+use lava_test::{AssertContext, run_case_against, tests_in_source};
 
 fn tests_dir() -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -53,13 +53,20 @@ fn every_committed_test_fixture_passes_against_its_architecture() {
             total_cases += 1;
             let arch_name = case.architecture.clone().unwrap_or_default();
             if arch_name.is_empty() {
-                failures.push(format!("{}: case {} has no :architecture", path.display(), case.name));
+                failures.push(format!(
+                    "{}: case {} has no :architecture",
+                    path.display(),
+                    case.name
+                ));
                 continue;
             }
             let arch_src = match architecture_src(&arch_name) {
                 Ok(s) => s,
                 Err(e) => {
-                    failures.push(format!("{}: {arch_name} missing source: {e}", path.display()));
+                    failures.push(format!(
+                        "{}: {arch_name} missing source: {e}",
+                        path.display()
+                    ));
                     continue;
                 }
             };

@@ -44,7 +44,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use lava_architectures::{
-    bind_dashboard_params, required_dashboard_params, unbound_placeholders, DASHBOARD_DIR,
+    DASHBOARD_DIR, bind_dashboard_params, required_dashboard_params, unbound_placeholders,
 };
 use lava_core::Theme;
 
@@ -207,7 +207,9 @@ fn parse_args(argv: impl Iterator<Item = String>) -> Result<Args, CliError> {
                 let kv = it.next().ok_or(CliError::Usage("--param needs k=v"))?;
                 // split_once, not split('='): a value may legitimately
                 // contain '=' (a PromQL matcher, a base64 tail).
-                let (k, v) = kv.split_once('=').ok_or(CliError::MalformedParam(kv.clone()))?;
+                let (k, v) = kv
+                    .split_once('=')
+                    .ok_or(CliError::MalformedParam(kv.clone()))?;
                 a.params.insert(k.to_string(), v.to_string());
             }
             "-o" | "--out" => {
@@ -355,12 +357,13 @@ fn run(a: Args) -> Result<Vec<u8>, CliError> {
     // Theme::default() is tundra, and tundra is the only theme lava-core
     // ships. A --theme flag over a one-element set would read as choice
     // where there is none; add it when a second theme exists.
-    let json = lava_eval::render_dashboard_grafana_json(&bound, &Theme::default()).map_err(
-        |source| CliError::Eval {
-            name: name.clone(),
-            source,
-        },
-    )?;
+    let json =
+        lava_eval::render_dashboard_grafana_json(&bound, &Theme::default()).map_err(|source| {
+            CliError::Eval {
+                name: name.clone(),
+                source,
+            }
+        })?;
 
     let bytes = to_stable_json(&json).map_err(|e| CliError::Eval {
         name: name.clone(),

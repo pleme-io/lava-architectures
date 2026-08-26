@@ -15,7 +15,7 @@
 use std::collections::BTreeMap;
 use std::process::{Command, Output};
 
-use lava_architectures::{required_dashboard_params, unbound_placeholders, DASHBOARD_DIR};
+use lava_architectures::{DASHBOARD_DIR, required_dashboard_params, unbound_placeholders};
 
 /// The binary under test, path supplied by cargo.
 const BIN: &str = env!("CARGO_BIN_EXE_lava-render");
@@ -248,7 +248,10 @@ fn an_unknown_dashboard_exits_non_zero_and_names_it() {
     assert!(!out.status.success(), "unknown dashboard exited 0");
     assert!(out.stdout.is_empty(), "wrote a document anyway");
     let err = String::from_utf8_lossy(&out.stderr);
-    assert!(err.contains("no-such-board"), "error does not name it: {err}");
+    assert!(
+        err.contains("no-such-board"),
+        "error does not name it: {err}"
+    );
     // The available list is what turns "unknown" into "you meant this".
     assert!(
         err.contains("workload-overview"),
@@ -338,7 +341,10 @@ fn a_parse_or_eval_failure_exits_non_zero() {
         let bad = dir.join(format!("{label}.tlisp"));
         std::fs::write(&bad, src).unwrap();
         let out = Command::new(BIN).arg(&bad).output().expect("spawn");
-        assert!(!out.status.success(), "{label}: exited 0 on a broken source");
+        assert!(
+            !out.status.success(),
+            "{label}: exited 0 on a broken source"
+        );
         assert!(out.stdout.is_empty(), "{label}: emitted a document anyway");
         let err = String::from_utf8_lossy(&out.stderr);
         assert!(
