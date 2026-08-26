@@ -28,12 +28,47 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 indexmap = { version = "2", features = ["serde"] }
 thiserror = "2"
-lava-core = "0.2"
-lava-arch = "0.2"
+# ── ★ GIT-PINNED, NOT REGISTRY (2026-08-26) ──────────────────────────
+# The matrix was silently testing a DIFFERENT evaluator than the one that
+# ships. These resolved lava-eval 0.2.2 from crates.io, which predates the
+# (import ...) form and record-valued inputs, so github-org-repos failed to
+# eval with "attr key not :kw" — the published evaluator has no import
+# branch, so it fell through to the generic attr parser and hit the import
+# id where it wanted a keyword.
+#
+# Worse, it hid behind a passing gate first: with no record bindings the
+# for-each loops iterate nothing, the architecture renders ZERO resources,
+# and lava reports that as SUCCESS. The matrix only caught it once a
+# fixture supplied real records.
+#
+# Pin by git rev until the three crates publish; the revs must be at or
+# ahead of the commit introducing any form the architectures use.
+lava-core = { git = "https://github.com/pleme-io/lava-core", rev = "f7530d06a52c3356d81415c6611c5ccd2c8cbd06" }
+lava-arch = { git = "https://github.com/pleme-io/lava-arch", rev = "035f2f547e299048d96484ef118bada964f96d47" }
 lava-contracts = "0.2"
-lava-eval = "0.2"
+lava-eval = { git = "https://github.com/pleme-io/lava-eval", rev = "1b8959e92067e1bbbaa3dfad4b54d4a79098de69" }
 lava-schema = "0.1"
 lava-types = "0.1"
 
 [dev-dependencies]
-lava-test = "0.2"
+lava-test = { git = "https://github.com/pleme-io/lava-test", rev = "bce9f25947610af7206f74b612d5ff73307c27bd" }
+
+# ── ★ THE PATCH IS FOR TRANSITIVE CONSUMERS, and it is required ───────
+# Git-pinning the direct deps above is not enough on its own. `lava-test`
+# comes from crates.io and depends on REGISTRY lava-core, so the build ends
+# up with two distinct `lava_core::Architecture` types and the test suite
+# fails E0308 comparing one to the other — a type error whose message never
+# mentions the real cause, only that Architecture is not Architecture.
+#
+# [patch.crates-io] rewrites lava-* for every consumer including lava-test,
+# collapsing them to one source. It lives at the workspace root because that
+# is the only place it applies.
+#
+# ★ THE REVS HERE MUST MATCH THE DIRECT DEPS ABOVE. When they drifted in
+# pangea-operator the lockfile carried two lava-eval entries and the release
+# failed on a method that existed in neither.
+[patch.crates-io]
+lava-test = { git = "https://github.com/pleme-io/lava-test", rev = "bce9f25947610af7206f74b612d5ff73307c27bd" }
+lava-core = { git = "https://github.com/pleme-io/lava-core", rev = "f7530d06a52c3356d81415c6611c5ccd2c8cbd06" }
+lava-arch = { git = "https://github.com/pleme-io/lava-arch", rev = "035f2f547e299048d96484ef118bada964f96d47" }
+lava-eval = { git = "https://github.com/pleme-io/lava-eval", rev = "1b8959e92067e1bbbaa3dfad4b54d4a79098de69" }

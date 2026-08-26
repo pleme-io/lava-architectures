@@ -60,6 +60,72 @@ fn minimal_bindings(
                 "11112222333344445555666677778888".to_string(),
             );
         }
+        // ── ★ THE ONLY RECORD-VALUED ARCHITECTURE IN THE MATRIX ─────────
+        // Every value here is an :input, so with an empty bag the for-each
+        // loops iterate nothing and the whole architecture renders ZERO
+        // resources — which lava reports as SUCCESS, not as an error. That
+        // is the shape this matrix exists to catch: an architecture can be
+        // perfectly valid, evaluate cleanly, and emit nothing.
+        //
+        // The fixture therefore supplies ONE repo with every `:when`
+        // predicate true, so each conditional resource family is actually
+        // exercised rather than skipped. Predicates are strings because
+        // that is what a record scalar is; truthy spellings are
+        // "true"/"#t"/"1".
+        "github-org-repos" => {
+            b.set_str("owner", "pleme-io");
+            bag.insert("owner".to_string(), "pleme-io".to_string());
+            // The evaluator reads `repo_count` (the architecture's own input
+            // spelling); the interface declares `repo-count`. Only the latter
+            // belongs in the bag — seeding both makes the interface reject an
+            // unknown input.
+            b.set_str("repo_count", "1");
+
+            let mut repo = std::collections::BTreeMap::new();
+            for (k, v) in [
+                ("name", "matrix-repo"),
+                ("description", "matrix fixture repository"),
+                ("visibility", "public"),
+                ("archived", "false"),
+                ("default_branch", "main"),
+                ("has_issues", "true"),
+                ("delete_branch_on_merge", "true"),
+                ("actions_enabled", "true"),
+                ("standard_labels", "true"),
+                ("has_branch_protection", "true"),
+                ("bp_strict", "true"),
+                ("bp_enforce_admins", "true"),
+                ("has_ci_shim", "true"),
+                ("ci_shim_path", ".github/workflows/ci.yml"),
+                ("ci_shim_slug", "ci"),
+                ("ci_shim_content", "name: ci\non: [push]\n"),
+                ("exists_on_github", "true"),
+            ] {
+                repo.insert(k.to_string(), v.to_string());
+            }
+            b.set_records("repos", vec![repo]);
+
+            let mut label = std::collections::BTreeMap::new();
+            for (k, v) in [
+                ("name", "bug"),
+                ("slug", "bug"),
+                ("color", "d73a4a"),
+                ("description", "Something is not working"),
+            ] {
+                label.insert(k.to_string(), v.to_string());
+            }
+            b.set_records("labels", vec![label]);
+
+            // ── ★ THE BAG IS A SECOND, FLAT VIEW and it is NOT optional ─────
+            // `bindings` is what the evaluator reads; `bag` is what the typed
+            // Interface validates. Records live only in the former, so a
+            // record-valued input is absent from the latter and the interface
+            // rejects the architecture as missing a required input — even
+            // though it just rendered correctly. Both views must be fed.
+            for (k, v) in [("repos", "matrix-repo"), ("labels", "bug"), ("repo-count", "1")] {
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
         "akeyless-secrets" => {
             b.set_str("name-prefix", "matrix-test");
             bag.insert("name-prefix".to_string(), "matrix-test".to_string());

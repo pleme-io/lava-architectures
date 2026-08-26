@@ -79,7 +79,14 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("cloudflare-domain", 2),            // zone + root
     ("cloudflare-dns-security", 3),      // dmarc + spf + dkim
     ("aws-sg-ingress-rules", 2),         // ssh + api ingress on an externally-owned sg
-    ("github-org-repos", 1),             // one resource set per catalogued repo
+    // 5 for ONE repo with every predicate true: repository + issue-label +
+    // actions-permissions + repository-file + branch-protection. A floor of 1
+    // would have passed while four of the five families were skipped — the
+    // fixture turns each `:when` on precisely so the gate is not vacuous.
+    // (The per-repo `import` is an adoption, not a resource, so it does not
+    // count here — it is exercised by the eval step, which is where a missing
+    // import form fails.)
+    ("github-org-repos", 5),
     ("akeyless-dev-packer", 2),          // role + bucket
     ("akeyless-dev-workspace", 2),       // vpc + subnet
     ("azure-aks-cluster", 1),            // aks
