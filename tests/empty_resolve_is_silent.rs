@@ -74,33 +74,43 @@ fn the_empty_render_carries_no_signal_that_resolve_failed() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// HAZARD 2 — the ported branch-protection surface is NARROWER than the
-// Ruby's profile table, and the gap is silent.
+// HAZARD 2 — the ported branch-protection surface DIVERGES FROM THE RUBY
+// IN BOTH DIRECTIONS, and the Ruby side is not what `open_source_repo.rb`
+// appears to say.
 //
-// `open_source_repo.rb`'s PROFILES carries FIVE fields per profile:
-//   required_reviews, dismiss_stale_reviews, require_signed_commits,
-//   require_linear_history, enforce_admins
-// The lava port emits TWO attributes on `github-branch-protection`:
-//   required_status_checks_strict, enforce_admins
+// MEASURED 2026-08-26 against pangea-github. An earlier revision of this
+// comment GUESSED, and guessed wrong: it assumed the five-field
+// `OpenSourceRepo::PROFILES` was the policy source. It is not.
 //
-// ★ STATE THE DENOMINATOR: what the RUBY finally emits to terraform is
-// UNVERIFIED here. The emission goes through
-// `Pangea::Helpers::Github.protect_default_branch`, which lives in
-// pangea-github — not cloned locally, gem not installed, and this token
-// cannot use code search. So "the Ruby emits all five" is PLAUSIBLE, not
-// measured, and this comment must not be read as proof of a regression.
+// What the RUBY emits, via `GithubPresets.protect_default_branch`:
+//   repository_id, pattern,
+//   allows_deletions: false, allows_force_pushes: false   <- EVERY profile
+//   + BRANCH_PROTECTION_PROFILES[profile], exactly THREE fields:
+//     enforce_admins, require_signed_commits, required_linear_history
 //
-// Why it still matters enough to pin: the org doctrine explicitly requires
-// `dismiss_stale_reviews: true` and `require_last_push_approval: true` on
-// the `standard` tier, citing a real incident where two post-approval
-// commits merged unreviewed. If the Ruby does emit those and the port does
-// not, migrating silently drops a mandated control — and a repo whose
-// protection quietly weakened looks identical to one that was migrated
-// correctly.
+// What the LAVA PORT emits:
+//   repository_id, pattern, required_status_checks_strict, enforce_admins
 //
-// The test below pins only the half that IS measurable: the exact attribute
-// set the port emits. If someone widens it, this fails and they update it
-// deliberately. Verifying the Ruby side is the open task.
+// So the port DROPS four attributes the Ruby always sets — allows_deletions,
+// allows_force_pushes, require_signed_commits, required_linear_history — and
+// ADDS one the Ruby never sets, required_status_checks_strict. Migrating
+// as-is would UNLOCK force-pushes and branch deletion on every repo that
+// currently has them locked.
+//
+// ── ★ AND A FINDING THAT OUTLIVES THIS MIGRATION ─────────────────────────
+// `open_source_repo.rb`'s PROFILES declares `required_reviews` and
+// `dismiss_stale_reviews` per profile. Grepped exhaustively: those two keys
+// appear ONLY at their definition sites (lines 41–56) and are read NOWHERE
+// — not in pangea-architectures, not in pangea-github. That table is a
+// validity whitelist for the `PROFILES.key?` check, not a policy source.
+//
+// So the org doctrine line requiring `dismiss_stale_reviews: true` on the
+// `standard` tier — the one citing the incident where two post-approval
+// commits merged unreviewed — is DECLARED BUT NOT EMITTED on the Ruby path
+// today, independent of lava. Fixing it in the port alone would not fix it.
+//
+// The test below pins the port's exact attribute set, so any move in either
+// direction is deliberate.
 
 use std::collections::BTreeMap;
 
