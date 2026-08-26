@@ -204,11 +204,56 @@ rec {
           "no-panic" = [ "dep:no-panic" ];
         };
       };
-      "lava-arch" = rec {
+      "lava-arch 0.2.2" = rec {
         crateName = "lava-arch";
-        version = "0.2.1";
+        version = "0.2.2";
         edition = "2024";
-        sha256 = "1540k0688m0h4a76xycvf2ylwkzfsz0qigwqnpr6d1x7nzwpzvil";
+        workspace_member = null;
+        src = pkgs.fetchgit {
+          url = "https://github.com/pleme-io/lava-arch";
+          rev = "689108f00d72d5c2f0ca0c27ada5249d2c151f07";
+          sha256 = "0aac5ybfpmaja4k2is7zd5536zajkpisaqq08vqmp7v5xhc14yjh";
+        };
+        libName = "lava_arch";
+        authors = [
+          "pleme-io"
+        ];
+        dependencies = [
+          {
+            name = "indexmap";
+            packageId = "indexmap";
+            features = [ "serde" ];
+          }
+          {
+            name = "lava-core";
+            packageId = "lava-core";
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+          }
+          {
+            name = "thiserror";
+            packageId = "thiserror";
+          }
+        ];
+
+      };
+      "lava-arch 0.2.3" = rec {
+        crateName = "lava-arch";
+        version = "0.2.3";
+        edition = "2024";
+        workspace_member = null;
+        src = pkgs.fetchgit {
+          url = "https://github.com/pleme-io/lava-arch";
+          rev = "035f2f547e299048d96484ef118bada964f96d47";
+          sha256 = "1535f8dk8xx8h33vzh9ah1icvdhnndbnfdqc2mxysribxc68mqai";
+        };
         libName = "lava_arch";
         authors = [
           "pleme-io"
@@ -241,7 +286,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.2.5";
+        version = "0.2.6";
         edition = "2024";
         crateBin = [
           {
@@ -263,7 +308,7 @@ rec {
           }
           {
             name = "lava-arch";
-            packageId = "lava-arch";
+            packageId = "lava-arch 0.2.3";
           }
           {
             name = "lava-contracts";
@@ -336,9 +381,14 @@ rec {
       };
       "lava-core" = rec {
         crateName = "lava-core";
-        version = "0.2.2";
+        version = "0.2.3";
         edition = "2024";
-        sha256 = "1yhw3575dvkh66mjg22pz1lb4gv9qkpswxqz56v4lykwhccvrr53";
+        workspace_member = null;
+        src = pkgs.fetchgit {
+          url = "https://github.com/pleme-io/lava-core";
+          rev = "f7530d06a52c3356d81415c6611c5ccd2c8cbd06";
+          sha256 = "1cpda3a9f6m2xccamr0yf9k27xmhfrba6a43z0w8cc23nswh6r1i";
+        };
         libName = "lava_core";
         authors = [
           "pleme-io"
@@ -372,9 +422,14 @@ rec {
       };
       "lava-eval" = rec {
         crateName = "lava-eval";
-        version = "0.2.1";
+        version = "0.2.4";
         edition = "2024";
-        sha256 = "1kqgg7jm6ma34pvjdjiqna3961b845i8mf1a627vc7m1q91ygsyr";
+        workspace_member = null;
+        src = pkgs.fetchgit {
+          url = "https://github.com/pleme-io/lava-eval";
+          rev = "1b8959e92067e1bbbaa3dfad4b54d4a79098de69";
+          sha256 = "06zxwppph2hhmwishw4v7gyp69g244i5m8ixhzcs8zd4zsp1vzxm";
+        };
         libName = "lava_eval";
         authors = [
           "pleme-io"
@@ -387,7 +442,7 @@ rec {
           }
           {
             name = "lava-arch";
-            packageId = "lava-arch";
+            packageId = "lava-arch 0.2.2";
           }
           {
             name = "lava-core";
@@ -452,7 +507,12 @@ rec {
         crateName = "lava-test";
         version = "0.2.1";
         edition = "2024";
-        sha256 = "1fdlncsakr54pax45x84zhdr8prfdpyhp7kkibvqhb4dcjnvwwm6";
+        workspace_member = null;
+        src = pkgs.fetchgit {
+          url = "https://github.com/pleme-io/lava-test";
+          rev = "bce9f25947610af7206f74b612d5ff73307c27bd";
+          sha256 = "1y7c195s7c7ffra7ivcvl1fdva0g4xmp9dscgnkl3m0vsxsbji6r";
+        };
         libName = "lava_test";
         authors = [
           "pleme-io"
@@ -906,9 +966,9 @@ rec {
       };
       "syn" = rec {
         crateName = "syn";
-        version = "3.0.3";
+        version = "3.0.4";
         edition = "2021";
-        sha256 = "18srnql3cd39j9q6hf1az02p67rlr1rf6njx9zx4vxj9i3jvmsak";
+        sha256 = "17v4ac61x0hvj1879ywqzlwhyzg7n9lr9zniwrsif3b1ykfmq9z6";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
