@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "302439edc15edde76b738e4750f7c6f6c7b716c23094c63f44ecf699a552b4d2",
+  "cargo_lock_sha256": "32d61f39321b59eb1e6b7effed15bdb353fdecaa18550bf297106fd2524ed3d1",
   "manifest_sha256": {
-    "Cargo.toml": "c68147127b277026916fc5a702dcf4e855ae3878963d51d4073914a91aa6f9c5"
+    "Cargo.toml": "a33699ac449345ad390c1211737592e1f15a65613d06127b357d0a61bf2ce010"
   },
   "target_resolves": {
     "base": {
@@ -35,7 +35,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "indexmap-2.14.0": {
+      "indexmap-2.14.1": {
         "runtime_dependencies": [
           {
             "name": "equivalent",
@@ -84,7 +84,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [
               "serde"
@@ -144,7 +144,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [
               "serde"
@@ -200,11 +200,11 @@
         "build_dependencies": [],
         "features": []
       },
-      "lava-architectures-0.2.7": {
+      "lava-architectures-0.2.8": {
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [
               "serde"
@@ -314,7 +314,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [
               "serde"
@@ -354,7 +354,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [
               "serde"
@@ -416,7 +416,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [
               "serde"
@@ -506,7 +506,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [
               "serde"
@@ -556,7 +556,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [
               "serde"
@@ -948,7 +948,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1009,7 +1009,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.1",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1206,7 +1206,7 @@
     "hashbrown-0.17.1": {
       "edition": "2024"
     },
-    "indexmap-2.14.0": {
+    "indexmap-2.14.1": {
       "edition": "2024"
     },
     "itoa-1.0.18": {
@@ -1218,7 +1218,7 @@
     "lava-arch-0.2.3-035f2f547e299048d96484ef118bada964f96d47": {
       "edition": "2024"
     },
-    "lava-architectures-0.2.7": {
+    "lava-architectures-0.2.8": {
       "edition": "2024",
       "lib_target": {
         "name": "lava_architectures",
