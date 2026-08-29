@@ -127,7 +127,7 @@
     (:description "pleme-io - substrate, languages, platform, products.")
     (:substrate-channels ("magma" "lava" "sui" "nix"))
     (:languages-channels ("tatara-lisp" "blue"))
-    (:platform-channels ("blackmatter" "camelot" "k8s"))
+    (:platform-channels ("blackmatter" "fleet" "k8s"))
     (:products-channels ("mado" "hiroba" "gpu-apps"))
     (:ops-channels ("alerts" "releases"))
     (:voice-channels ("general" "pairing")))

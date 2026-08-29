@@ -238,7 +238,7 @@ fn strip_comments(src: &str) -> String {
 ///
 /// The grammar is deliberately narrow — `[A-Za-z_][A-Za-z0-9_]*` — because
 /// a brace in one of these documents is far more often NOT a placeholder:
-/// `{namespace=\"camelot\"}` is a LogsQL stream selector and `up{job=…}`
+/// `{namespace=\"prod\"}` is a LogsQL stream selector and `up{job=…}`
 /// is a PromQL matcher. Both are rejected by the grammar (they carry `=`
 /// and quotes), so a scan for "any `{`" would report a leak on every
 /// correctly-rendered board and get switched off within a week.
@@ -356,7 +356,7 @@ mod dashboard_param_tests {
     #[test]
     fn selectors_are_not_mistaken_for_placeholders() {
         // Both real: a LogsQL stream selector and a PromQL matcher.
-        let src = r#"(:expr "{namespace=\"camelot\"} up{job=\"auth\"}")"#;
+        let src = r#"(:expr "{namespace=\"prod\"} up{job=\"auth\"}")"#;
         assert!(
             required_dashboard_params(src).is_empty(),
             "a query selector was read as a placeholder"
@@ -365,9 +365,9 @@ mod dashboard_param_tests {
 
     #[test]
     fn legends_survive_binding_and_are_not_reported_as_leaks() {
-        let params = BTreeMap::from([("namespace", "camelot")]);
+        let params = BTreeMap::from([("namespace", "prod")]);
         let bound = bind_dashboard_params("{namespace} {{namespace}}", &params);
-        assert_eq!(bound, "camelot {{namespace}}");
+        assert_eq!(bound, "prod {{namespace}}");
         assert!(
             unbound_placeholders(&bound).is_empty(),
             "a preserved Grafana legend was reported as an unbound placeholder"
@@ -376,7 +376,7 @@ mod dashboard_param_tests {
 
     #[test]
     fn an_unbound_placeholder_is_named() {
-        let params = BTreeMap::from([("env", "camelot")]);
+        let params = BTreeMap::from([("env", "prod")]);
         let bound = bind_dashboard_params("{env}-{service}", &params);
         let leaked = unbound_placeholders(&bound);
         assert_eq!(leaked.len(), 1);

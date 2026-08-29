@@ -10,7 +10,7 @@
 ;; series.
 ;;
 ;; Params:
-;;   env         the cell, e.g. "camelot"
+;;   env         the cell, e.g. "prod"
 ;;   datasource  the metrics datasource uid
 ;;
 ;; NOT params, deliberately: the metric names. Ruby took seven of them

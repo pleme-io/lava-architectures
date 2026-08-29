@@ -273,7 +273,7 @@ fn a_missing_param_exits_non_zero_and_names_the_param() {
     let out = render(&[
         "workload-overview",
         "--param",
-        "env=camelot",
+        "env=prod",
         "--param",
         "service=auth",
         "--param",

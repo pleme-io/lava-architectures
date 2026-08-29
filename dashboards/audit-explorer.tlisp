@@ -6,12 +6,12 @@
 ;; `gateway_auth_total` and its family return no series at all.
 ;;
 ;; Params:
-;;   env         the cell, e.g. "camelot"
+;;   env         the cell, e.g. "prod"
 ;;   namespace   the namespace whose stream to read
 ;;   datasource  the LOGS datasource uid (vlogs)
 ;;
 ;; The stream selector is composed here from `namespace`, never passed in.
-;; Ruby took `stream: '{namespace="camelot"}'` as a parameter, and that
+;; Ruby took `stream: '{namespace="prod"}'` as a parameter, and that
 ;; value carries double quotes — bound textually into a tlisp string
 ;; literal it closes the literal early and evaluates a different document
 ;; that still parses. Composing from a quote-free `namespace` removes the

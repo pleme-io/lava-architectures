@@ -71,7 +71,7 @@ OPTIONS:
 
 EXAMPLE:
     lava-render workload-overview \\
-      --param env=camelot --param service=auth --param job=auth \\
+      --param env=prod --param service=auth --param job=auth \\
       --param namespace=default \\
       --param datasource=mimir --param logs_datasource=vlogs
 ";

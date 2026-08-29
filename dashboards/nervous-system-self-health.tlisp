@@ -2,8 +2,9 @@
 ;;
 ;; Replaces Ruby's NervousSystemSelfHealthBoard, and does NOT reproduce its
 ;; interface. That board took `subsystems:` and `stages:` — hand-written
-;; lists of "which jobs make up the plane" — and camelot supplied neither,
-;; so it rendered with its liveness row and its pipeline row both skipped.
+;; lists of "which jobs make up the plane" — and the deploying chart
+;; supplied neither, so it rendered with its liveness row and its pipeline
+;; row both skipped.
 ;; A self-health board that is empty because nobody filled in its inventory
 ;; is worse than absent: it occupies the slot where the real one would go.
 ;;
@@ -15,39 +16,41 @@
 ;; reads green because the query still matches nothing.
 ;;
 ;; Params:
-;;   env         the cell, e.g. "camelot"
-;;   namespace   the cell's PRIMARY workload namespace, e.g. "camelot"
+;;   env         the cell, e.g. "prod"
+;;   namespace   the cell's PRIMARY workload namespace, e.g. "prod"
 ;;   datasource  the metrics datasource uid
 ;;
 ;; The first panel is the one that matters most and is the one people
 ;; leave out: `up == 1` with a component's own series ABSENT is a broken
-;; scrape, not a healthy component. TENDRIL names this as the first thing
-;; an agent must check, precisely because it looks identical to health.
+;; scrape, not a healthy component. The agentic-observability doctrine
+;; names this as the first thing an agent must check, precisely because it
+;; looks identical to health.
 ;;
-;; ── The plane is NOT one namespace, measured 2026-08-11 on camelot ───────
+;; ── The plane is NOT one namespace, measured 2026-08-11 ─────────────────
 ;; The first draft of this board scoped every panel to `namespace`, which
 ;; would have made it useless exactly where it matters. Queried against
-;; camelot's own VictoriaMetrics:
+;; one production cluster's own VictoriaMetrics:
 ;;
 ;;   count by (namespace) (up)  ->  monitoring 8, breathe-system 9,
-;;                                  keda 6, keda-http 2, camelot-nats 1,
-;;                                  camelot 1, (no namespace) 32
+;;                                  keda 6, keda-http 2, ONE apiece in
+;;                                  the cell's own nats and workload
+;;                                  namespaces, (no namespace) 32
 ;;
 ;; So the observability plane lives in `monitoring`, the controllers it
-;; watches in `breathe-system`, and the cell's workloads in `camelot` —
-;; and a board scoped to any ONE of those reports on a seventh of the
-;; plane while looking complete. The liveness panels below are therefore
-;; fleet-wide, grouped BY namespace and job; only the workload-namespace
-;; panel uses `namespace`, and it says so in its title.
+;; watches in `breathe-system`, and the cell's own workloads in its own
+;; namespace — and a board scoped to any ONE of those reports on a seventh
+;; of the plane while looking complete. The liveness panels below are
+;; therefore fleet-wide, grouped BY namespace and job; only the
+;; workload-namespace panel uses `namespace`, and it says so in its title.
 ;;
-;; ── And two things it must report are BROKEN on camelot right now ────────
-;; `up{namespace="camelot"}` returns ONE target — pangea-operator. None of
-;; the nine akeyless services (auth, authcert, bis, uam, uamop, kfm, sdr,
-;; gator, logan) is scraped: `count by (job) (up{job=~"auth|…|logan"})`
-;; returns zero rows.
+;; ── And two things it must report were BROKEN when that was taken ───────
+;; `up` scoped to the cell's own workload namespace returns ONE target —
+;; pangea-operator. None of the nine akeyless services (auth, authcert,
+;; bis, uam, uamop, kfm, sdr, gator, logan) is scraped:
+;; `count by (job) (up{job=~"auth|…|logan"})` returns zero rows.
 ;;
-;; `vector_*` has ZERO series and `up{namespace="camelot-vector"}` has
-;; ZERO targets, while breathe holds a live `vector-memory` band in that
+;; `vector_*` has ZERO series and the cell's vector namespace has ZERO
+;; targets, while breathe holds a live `vector-memory` band in that
 ;; namespace — so vector is DEPLOYED AND UNSCRAPED.
 ;;
 ;; That is the exact case this board exists to make visible, so the
@@ -110,7 +113,7 @@
       :kind "timeseries"
       :title "targets by namespace"
       :unit "short"
-      :description "Scrape targets per namespace, across the WHOLE plane rather than one namespace. Measured on camelot: monitoring 8, breathe-system 9, keda 6, camelot 1. A board scoped to any single one of those would report on a seventh of the plane while looking complete."
+      :description "Scrape targets per namespace, across the WHOLE plane rather than one namespace. Measured on one production cluster: monitoring 8, breathe-system 9, keda 6, and 1 in the cell's own workload namespace. A board scoped to any single one of those would report on a seventh of the plane while looking complete."
       :queries ((:ref "A"
                  :expr "count by (namespace) (up)"
                  :datasource "{datasource}"
@@ -131,7 +134,7 @@
       :kind "stat"
       :title "targets in {namespace}"
       :unit "short"
-      :description "How many targets exist in the cell's OWN workload namespace — the one this board is instantiated for. On camelot this reads 1 (pangea-operator) against nine deployed akeyless services, which is the finding, not a rendering fault."
+      :description "How many targets exist in the cell's OWN workload namespace — the one this board is instantiated for. On the cluster this was measured against it reads 1 (pangea-operator) against nine deployed akeyless services, which is the finding, not a rendering fault."
       :queries ((:ref "A"
                  :expr "count(up{namespace=\"{namespace}\"})"
                  :datasource "{datasource}"
@@ -164,7 +167,7 @@
       :kind "stat"
       :title "vector unscraped?"
       :unit "short"
-      :description "1 when NO vector series exists anywhere. This panel leads the row because the two rows below cannot distinguish 'no errors' from 'nobody is looking' — both render empty. Measured on camelot 2026-08-11: vector_* has ZERO series while breathe holds a live vector-memory band in camelot-vector, i.e. vector is DEPLOYED AND UNSCRAPED. Fix the scrape, not the workload."
+      :description "1 when NO vector series exists anywhere. This panel leads the row because the two rows below cannot distinguish 'no errors' from 'nobody is looking' — both render empty. Measured on one production cluster 2026-08-11: vector_* has ZERO series while breathe holds a live vector-memory band in the cell's vector namespace, i.e. vector is DEPLOYED AND UNSCRAPED. Fix the scrape, not the workload."
       :queries ((:ref "A"
                  :expr "absent(vector_component_errors_total)"
                  :datasource "{datasource}"

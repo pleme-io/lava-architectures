@@ -32,6 +32,46 @@ fn architecture_path(name: &str) -> std::path::PathBuf {
         .join(format!("{name}.tlisp"))
 }
 
+/// Pull the string list bound to `(:<key> ("a" "b" …))` out of an
+/// architecture's own `.tlisp` source.
+///
+/// DERIVED, never restated. `pleme-io-server`'s channel lists carry no
+/// interface default, so the matrix has to supply them — and the obvious
+/// way to do that is to type them out here a second time, which is what
+/// this replaces. A second copy is free to disagree with the source it
+/// exists to exercise, and here the disagreement would not be cosmetic:
+/// these lists decide how many channels render, and the resource floor in
+/// `BUNDLED_ARCHITECTURES` is checked against that count, so a drifted
+/// copy moves the floor without touching the architecture it claims to
+/// describe. Reading the values back out leaves them unable to differ.
+///
+/// The interface declares the same keys — `(:platform-channels :type …)` —
+/// so a `(` is required after the key. That is what tells the
+/// architecture's VALUES apart from the interface's TYPE.
+fn string_list_input(src: &str, key: &str) -> Vec<String> {
+    let needle = format!("(:{key}");
+    let mut from = 0usize;
+    while let Some(rel) = src[from..].find(&needle) {
+        let after = from + rel + needle.len();
+        let rest = src[after..].trim_start();
+        if !rest.starts_with('(') {
+            from = after;
+            continue;
+        }
+        let open = src.len() - rest.len();
+        let Some(close) = src[open..].find(')') else {
+            return Vec::new();
+        };
+        return src[open..open + close]
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .map(ToString::to_string)
+            .collect();
+    }
+    Vec::new()
+}
+
 fn count_resources(json: &serde_json::Value) -> usize {
     let Some(by_type) = json.get("resource").and_then(serde_json::Value::as_object) else {
         return 0;
@@ -332,31 +372,35 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
         }
         "pleme-io-server" => {
             // The channel lists have no interface default, so the matrix must
-            // supply them — and it supplies the REAL ones, not one element
-            // each. The registry's resource floor is also what `lava ls`
-            // reports to an operator, so it has to describe the architecture
-            // as written; a short list here would render 35 and force that
-            // floor down to a number that understates the real server by nine
-            // channels.
-            for (k, vs) in [
-                (
-                    "substrate-channels",
-                    ["magma", "lava", "sui", "nix"].as_slice(),
-                ),
-                ("languages-channels", ["tatara-lisp", "blue"].as_slice()),
-                (
-                    "platform-channels",
-                    ["blackmatter", "camelot", "k8s"].as_slice(),
-                ),
-                (
-                    "products-channels",
-                    ["mado", "hiroba", "gpu-apps"].as_slice(),
-                ),
-                ("ops-channels", ["alerts", "releases"].as_slice()),
-                ("voice-channels", ["general", "pairing"].as_slice()),
+            // supply them — and it supplies the REAL ones, read back out of
+            // the architecture's own `:inputs`, not one element each and not
+            // a second hand-typed copy. The registry's resource floor is also
+            // what `lava ls` reports to an operator, so it has to describe
+            // the architecture as written; a short list here would render 35
+            // and force that floor down to a number that understates the real
+            // server by nine channels.
+            let src = std::fs::read_to_string(architecture_path(arch_name))
+                .expect("pleme-io-server source is readable");
+            for k in [
+                "substrate-channels",
+                "languages-channels",
+                "platform-channels",
+                "products-channels",
+                "ops-channels",
+                "voice-channels",
             ] {
-                b.set_list(k, vs.iter().map(|s| (*s).to_string()).collect());
+                let vs = string_list_input(&src, k);
+                // Carry the denominator. An extractor that silently found
+                // nothing would bind an empty list, the for-each loops would
+                // iterate nothing, and the render would be a "successful"
+                // document with nine channels missing.
+                assert!(
+                    !vs.is_empty(),
+                    "{k}: no string list found in the pleme-io-server source — \
+                     the matrix would bind nothing and exercise nothing"
+                );
                 bag.insert(k.to_string(), vs.join(","));
+                b.set_list(k, vs);
             }
         }
         "discord-server-baseline" => {

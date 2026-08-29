@@ -16,14 +16,14 @@
 ;; because its query still matches nothing.
 ;;
 ;; ── PARAMS, and what STOPPED being one ──────────────────────────────────
-;;   env              the cell, e.g. "camelot" — labels the note only
+;;   env              the cell, e.g. "prod" — labels the note only
 ;;   namespace        the namespace the akeyless services run in
 ;;   datasource       the metrics datasource uid, e.g. "mimir"
 ;;   logs_datasource  the logs datasource uid, e.g. "vlogs"
 ;;
 ;; NOT params any more: `service` and `job`. `workload-overview` took both
 ;; (`service` scoped the pod regex, `job` scoped the `up` selector) and the
-;; camelot chart passed the same string for each. They are now the single
+;; deploying chart passed the same string for each. They are now the single
 ;; `$service` variable, and every selector on this board reads it —
 ;; `job="$service"` on the scrape side, `pod=~"$service.*"` on the
 ;; kube-state / cAdvisor / logs side. Collapsing two params into one
@@ -123,7 +123,7 @@
 ;;     rejects any panel with zero queries, text panels included.
 ;;
 ;; ── ONE MORE MEASURED FACT THAT SHAPES THE BOARD ────────────────────────
-;; camelot's census (dashboard_matrix.rs, 2026-08-11 23:40Z) recorded
+;; The census (dashboard_matrix.rs, 2026-08-11 23:40Z) recorded
 ;; `count by (job) (up{job=~"auth|authcert|bis|uam|uamop|kfm|sdr|gator|logan"})`
 ;; returning ZERO ROWS — none of the nine services is scraped there at
 ;; all. On a boundary in that state the `$service` picker is EMPTY and
@@ -190,7 +190,7 @@
       :width 4
       :title "scrape present?"
       :unit "short"
-      :description "1 when the up series for job=\"$service\" is absent ENTIRELY — no target, no error, nothing. This is the failure the tile beside it structurally cannot show: with no series there is nothing to evaluate as 0, so a missing scrape and a healthy service produce the same green. Measured on camelot 2026-08-11: none of the nine akeyless services was scraped, so this tile is the one that would have been red."
+      :description "1 when the up series for job=\"$service\" is absent ENTIRELY — no target, no error, nothing. This is the failure the tile beside it structurally cannot show: with no series there is nothing to evaluate as 0, so a missing scrape and a healthy service produce the same green. Measured on one production cluster 2026-08-11: none of the nine akeyless services was scraped, so this tile is the one that would have been red."
       :queries ((:ref "A"
                  :expr "absent(up{namespace=\"{namespace}\",job=\"$service\"})"
                  :datasource "{datasource}"

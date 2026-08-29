@@ -53,7 +53,7 @@
 ;; The akeyless application metric family (`gateway_auth_total` and its
 ;; siblings) returns ZERO SERIES. Re-measured 2026-08-17 over a fresh 2h
 ;; window on Akeyless's own Datadog, and consistent with the 2026-08-11
-;; camelot census recorded in tests/dashboard_matrix.rs. workload-overview's
+;; census recorded in tests/dashboard_matrix.rs. workload-overview's
 ;; own header states that 4 of the 6 akeyless microservices expose no
 ;; domain metric at all.
 ;;
@@ -98,20 +98,24 @@
 ;; `up` counts SCRAPE TARGETS, not services. A deployment with three
 ;; replicas and a ServiceMonitor is three targets; a deployment with NO
 ;; ServiceMonitor is zero targets — invisible to the first two tiles while
-;; still appearing in every kube_* panel below it. Measured on camelot
-;; 2026-08-11: `count by (job) (up{job=~"auth|authcert|bis|uam|uamop|kfm|
+;; still appearing in every kube_* panel below it. Measured on one
+;; production cluster 2026-08-11:
+;; `count by (job) (up{job=~"auth|authcert|bis|uam|uamop|kfm|
 ;; sdr|gator|logan"})` returned ZERO ROWS — none of the nine akeyless
-;; services was scraped at all, so `count(up{namespace="camelot"})` read 1
+;; services was scraped at all, so a namespace-scoped `count(up{…})` read 1
 ;; (pangea-operator) against nine deployed services. That is why the
 ;; denominator sits on tile 1 next to the live count instead of being left
 ;; for the reader to infer: without it, zero-scraped and all-healthy are
 ;; the same picture.
 ;;
 ;; ── Which kube-state families are measured, and which are inferred ──────
-;; MEASURED 2026-08-11 on camelot's own VictoriaMetrics: `kube_pod_info`
-;; 8071 series, `container_memory_working_set_bytes` 604,
-;; `container_cpu_usage_seconds_total` 604. kube-state-metrics is
-;; unambiguously up and cAdvisor is unambiguously scraped.
+;; MEASURED 2026-08-11 on one production cluster's own VictoriaMetrics:
+;; `kube_pod_info`, `container_memory_working_set_bytes` and
+;; `container_cpu_usage_seconds_total` were all present and non-empty, so
+;; kube-state-metrics is unambiguously up and cAdvisor is unambiguously
+;; scraped. The series COUNTS are not recorded: present-vs-absent is the
+;; property a board needs, and a count is a census of how big the estate
+;; sampled happened to be.
 ;;
 ;; NOT individually measured: `kube_deployment_*`,
 ;; `kube_horizontalpodautoscaler_*`, `kube_job_*`,

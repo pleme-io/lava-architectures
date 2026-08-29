@@ -28,7 +28,7 @@ than only reproducible inside a cluster.
 cargo run --bin lava-render -- --list
 
 cargo run --bin lava-render -- workload-overview \
-  --param env=camelot --param service=auth --param job=auth \
+  --param env=prod --param service=auth --param job=auth \
   --param namespace=default \
   --param datasource=mimir --param logs_datasource=vlogs \
   --out workload-overview.json

@@ -29,7 +29,7 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
         (
             "workload-overview",
             BTreeMap::from([
-                ("env", "camelot"),
+                ("env", "prod"),
                 ("service", "auth"),
                 ("job", "auth"),
                 ("namespace", "default"),
@@ -40,7 +40,7 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
         (
             "homeostasis-control",
             BTreeMap::from([
-                ("env", "camelot"),
+                ("env", "prod"),
                 ("board", "homeostasis-control"),
                 ("datasource", "mimir"),
             ]),
@@ -48,7 +48,7 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
         (
             "nervous-system-self-health",
             BTreeMap::from([
-                ("env", "camelot"),
+                ("env", "prod"),
                 ("board", "nervous-system-self-health"),
                 ("namespace", "default"),
                 ("datasource", "mimir"),
@@ -57,7 +57,7 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
         (
             "audit-explorer",
             BTreeMap::from([
-                ("env", "camelot"),
+                ("env", "prod"),
                 ("board", "audit-explorer"),
                 ("namespace", "default"),
                 ("datasource", "vlogs"),
@@ -66,7 +66,7 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
         (
             "log-explorer",
             BTreeMap::from([
-                ("env", "camelot"),
+                ("env", "prod"),
                 ("board", "log-explorer"),
                 ("namespace", "default"),
                 ("logs_datasource", "vlogs"),
@@ -82,7 +82,7 @@ fn catalogue() -> Vec<(&'static str, BTreeMap<&'static str, &'static str>)> {
         (
             "audit-logs-overview",
             BTreeMap::from([
-                ("env", "camelot"),
+                ("env", "prod"),
                 ("namespace", "default"),
                 ("datasource", "mimir"),
                 ("logs_datasource", "vlogs"),
@@ -241,9 +241,9 @@ fn every_catalogue_file_has_a_row() {
 /// parses. The visible symptom is a query pointing at a datasource that
 /// was never declared, or a declared datasource nothing references.
 ///
-/// It is a real hazard, not a hypothetical: camelot's chart passes
-/// `logsStream: '{namespace="camelot"}'`, and binding that as a param
-/// would have done exactly this.
+/// It is a real hazard, not a hypothetical: the deploying chart passes
+/// `logsStream: '{namespace="…"}'` — a value carrying double quotes — and
+/// binding that as a param would have done exactly this.
 #[test]
 fn declared_datasources_and_query_references_agree() {
     let dir = dashboards_dir();
@@ -368,9 +368,9 @@ const PROVEN_SERIES: &[(&str, &str)] = &[
     ),
 ];
 
-/// What camelot's own VictoriaMetrics actually held, 2026-08-11 23:40Z,
-/// queried through a port-forward to
-/// `vmsingle-lareira-vm-stack-victoria-metrics-k8s-stack` in `monitoring`.
+/// What one production cluster's own VictoriaMetrics actually held,
+/// 2026-08-11 23:40Z, queried through a port-forward to that cluster's
+/// `victoria-metrics-k8s-stack` vmsingle in `monitoring`.
 ///
 /// Recorded because "the metric family exists" is NOT the property a board
 /// needs — it needs the series to exist for the namespace and job it
@@ -378,26 +378,33 @@ const PROVEN_SERIES: &[(&str, &str)] = &[
 /// board ships that renders empty. Two of these were found exactly that
 /// way, after the boards were already written:
 ///
-///   breathe_band_util_ratio                155 series
-///   breathe_band_dry_run                   172 series  (all ==1; ZERO ==0)
-///   kube_pod_info                         8071 series
-///   container_memory_working_set_bytes      604
-///   container_cpu_usage_seconds_total       604
-///   scrape_duration_seconds               3739
-///   scrape_samples_scraped                  59
+///   breathe_band_util_ratio                  present, non-empty
+///   breathe_band_dry_run                     present  (all ==1; ZERO ==0)
+///   kube_pod_info                            present, non-empty
+///   container_memory_working_set_bytes       present, non-empty
+///   container_cpu_usage_seconds_total        present, non-empty
+///   scrape_duration_seconds                  present, non-empty
+///   scrape_samples_scraped                   present, non-empty
 ///   vector_component_errors_total            0   <-- DEPLOYED, UNSCRAPED
 ///   vector_component_discarded_events_total  0   <-- same
 ///   gateway_auth_total                       0   <-- no instrumentation
 ///
 ///   count by (namespace) (up):  monitoring 8, breathe-system 9, keda 6,
-///                               keda-http 2, camelot-nats 1, camelot 1
+///                               keda-http 2, and ONE apiece in the cell's
+///                               own nats and workload namespaces
 ///   count by (job) (up{job=~"auth|authcert|bis|uam|uamop|kfm|sdr|gator|logan"}):
 ///                               ZERO ROWS — none of the nine akeyless
 ///                               services is scraped at all.
 ///
+/// The ZEROES are recorded and the magnitudes are not, deliberately. What
+/// a board needs from this table is present-vs-absent — a family that
+/// renders empty because nothing emits it. A series count answers a
+/// different question, about how big the estate the sample was taken on
+/// happened to be, which is neither this crate's business nor stable.
+///
 /// This is a DATED SNAPSHOT and nothing re-takes it. Re-measure before
 /// acting on any figure here; do not infer today's state from it.
-const _CAMELOT_SERIES_CENSUS_2026_08_11: () = ();
+const _SERIES_CENSUS_2026_08_11: () = ();
 
 /// A rendered board must read a signal we have evidence something emits.
 #[test]

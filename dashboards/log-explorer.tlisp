@@ -8,7 +8,7 @@
 ;; that is a scalar.
 ;;
 ;; Params:
-;;   env              the cell, e.g. "camelot"
+;;   env              the cell, e.g. "prod"
 ;;   namespace        the namespace to scope to
 ;;   logs_datasource  the LOGS datasource uid (vlogs)
 ;;

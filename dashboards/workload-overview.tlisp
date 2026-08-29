@@ -7,7 +7,7 @@
 ;; not the document the author wrote.
 ;;
 ;; Params:
-;;   env              the cell, e.g. "camelot"      -> uid/title
+;;   env              the cell, e.g. "prod"         -> uid/title
 ;;   service          the service name, e.g. "auth"
 ;;   job              the Prometheus job label
 ;;   namespace        the namespace the pods run in
@@ -15,7 +15,7 @@
 ;;   logs_datasource  the logs datasource uid, e.g. "vlogs"
 ;;
 ;; NOT a param: the LogsQL stream selector. The Ruby board took one
-;; (`stream:`), and the camelot chart passed `{namespace="camelot"}` --
+;; (`stream:`), and the deploying chart passed `{namespace="prod"}` --
 ;; a value containing double quotes. Scalar binding is textual, so that
 ;; value spliced into a tlisp string literal TERMINATES the literal and
 ;; the document stops being the one the author wrote. The selector is
@@ -102,7 +102,7 @@
    ;; DELIBERATE DIVERGENCE from the Ruby board this replaces, not an
    ;; oversight. Ruby's KubernetesPodPanels builds its selector from
    ;; `namespace:` alone unless given a deployment or pod regex, and the
-   ;; camelot chart gave neither -- so all nine per-service boards showed
+   ;; deploying chart gave neither -- so all nine per-service boards showed
    ;; the SAME namespace-wide CPU and memory, on a board titled after one
    ;; service. A per-service board that answers a namespace-wide question
    ;; is worse than no panel: it reads as evidence about the service.
