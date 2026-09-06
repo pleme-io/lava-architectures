@@ -44,7 +44,7 @@
     ;; The repository itself.
     (for-each ((i repo) (enumerate repos))
       (github-repository
-        "{repo_name}"
+        "{repo_slug}"
         :name "{repo_name}"
         :description "{repo_description}"
         :visibility "{repo_visibility}"
@@ -67,9 +67,9 @@
     (for-each ((i repo) (enumerate repos))
       (for-each ((j label) (enumerate labels))
         (github-issue-label
-          "{repo_name}-label-{label_slug}"
+          "{repo_slug}-label-{label_slug}"
           :when "{repo_standard_labels}"
-          :repository (ref github-repository "{repo_name}" name)
+          :repository (ref github-repository "{repo_slug}" name)
           :name "{label_name}"
           :color "{label_color}"
           :description "{label_description}")))
@@ -81,8 +81,8 @@
     ;; which reads as "we do not care" rather than "we want it off".
     (for-each ((i repo) (enumerate repos))
       (github-actions-repository-permissions
-        "{repo_name}_actions"
-        :repository (ref github-repository "{repo_name}" name)
+        "{repo_slug}_actions"
+        :repository (ref github-repository "{repo_slug}" name)
         :enabled "{repo_actions_enabled}"
         :allowed_actions "all"))
 
@@ -94,9 +94,9 @@
     ;; workflow that runs and does the wrong thing.
     (for-each ((i repo) (enumerate repos))
       (github-repository-file
-        "{repo_name}__{repo_ci_shim_slug}"
+        "{repo_slug}__{repo_ci_shim_slug}"
         :when "{repo_has_ci_shim}"
-        :repository (ref github-repository "{repo_name}" name)
+        :repository (ref github-repository "{repo_slug}" name)
         :file "{repo_ci_shim_path}"
         :content "{repo_ci_shim_content}"
         :overwrite_on_create #t))
@@ -107,9 +107,9 @@
     ;; table is a policy that silently diverges.
     (for-each ((i repo) (enumerate repos))
       (github-branch-protection
-        "{repo_name}_protection"
+        "{repo_slug}_protection"
         :when "{repo_has_branch_protection}"
-        :repository_id (ref github-repository "{repo_name}" node_id)
+        :repository_id (ref github-repository "{repo_slug}" node_id)
         :pattern "{repo_default_branch}"
         :required_status_checks_strict "{repo_bp_strict}"
         :enforce_admins "{repo_bp_enforce_admins}"))
@@ -123,7 +123,7 @@
     ;; resolves it and it arrives as a field. lava cannot and should not look.
     (for-each ((i repo) (enumerate repos))
       (import
-        "github_repository.{repo_name}"
+        "github_repository.{repo_slug}"
         "{repo_name}"
         :when "{repo_exists_on_github}")))
 

@@ -125,6 +125,8 @@ fn protected_repo_render() -> serde_json::Value {
     let mut repo = BTreeMap::new();
     for (k, v) in [
         ("name", "probe-repo"),
+        // The ADDRESS component — slugged, while `name` stays the real repo.
+        ("slug", "probe_repo"),
         ("description", "branch-protection surface probe"),
         ("visibility", "public"),
         ("archived", "false"),
@@ -220,6 +222,9 @@ fn a_record_missing_a_gated_only_field_fails_the_whole_render() {
     let mut repo = BTreeMap::new();
     for (k, v) in [
         ("name", "no-shim-repo"),
+        // Address component. Present so the render reaches the field this
+        // test is actually about, rather than tripping on the slug first.
+        ("slug", "no_shim_repo"),
         (
             "description",
             "has_ci_shim is false, so surely the slug is unused",

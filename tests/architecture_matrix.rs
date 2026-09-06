@@ -122,6 +122,8 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
             let mut repo = std::collections::BTreeMap::new();
             for (k, v) in [
                 ("name", "matrix-repo"),
+                // The ADDRESS component — slugged, while `name` stays the real repo.
+                ("slug", "matrix_repo"),
                 ("description", "matrix fixture repository"),
                 ("visibility", "public"),
                 ("archived", "false"),
