@@ -133,7 +133,7 @@ pub fn bundled_source(name: &str) -> Option<String> {
 pub const ARCHITECTURE_DIR: &str = "architectures";
 
 /// Convenience: load + evaluate one of the bundled architectures by
-/// name. Looks up `architectures/<name>.tlisp` relative to CARGO_MANIFEST_DIR.
+/// name. Looks up `architectures/<name>.tlisp` relative to `CARGO_MANIFEST_DIR`.
 ///
 /// # Errors
 /// Returns [`EvalError::NotArchForm`] wrapping the I/O failure if the
@@ -238,8 +238,8 @@ fn strip_comments(src: &str) -> String {
 ///
 /// The grammar is deliberately narrow — `[A-Za-z_][A-Za-z0-9_]*` — because
 /// a brace in one of these documents is far more often NOT a placeholder:
-/// `{namespace=\"prod\"}` is a LogsQL stream selector and `up{job=…}`
-/// is a PromQL matcher. Both are rejected by the grammar (they carry `=`
+/// `{namespace=\"prod\"}` is a `LogsQL` stream selector and `up{job=…}`
+/// is a `PromQL` matcher. Both are rejected by the grammar (they carry `=`
 /// and quotes), so a scan for "any `{`" would report a leak on every
 /// correctly-rendered board and get switched off within a week.
 fn scan_placeholders(masked: &str, out: &mut BTreeSet<String>) {
@@ -390,7 +390,7 @@ mod integration_tests {
 
     /// End-to-end byte-equivalence test. Loads aws-vpc-network.tlisp,
     /// evaluates with default inputs, renders terraform.json, validates
-    /// every field the pangea aws_vpc_network_spec asserts. Same state
+    /// every field the pangea `aws_vpc_network_spec` asserts. Same state
     /// file emerges from `tofu apply` and `magma apply`.
     #[test]
     fn aws_vpc_network_tlisp_renders_byte_equivalent_to_pangea_spec() {
@@ -502,7 +502,7 @@ mod integration_tests {
     }
 
     /// Akeyless secrets architecture emits all six resource types with
-    /// the path-prefixed names pangea's akeyless_secrets_spec asserts.
+    /// the path-prefixed names pangea's `akeyless_secrets_spec` asserts.
     #[test]
     fn akeyless_secrets_tlisp_renders_full_resource_set() {
         let bindings = InputBindings::new();

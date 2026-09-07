@@ -44,19 +44,8 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 [[package]]
 name = "lava-arch"
 version = "0.2.2"
-source = "git+https://github.com/pleme-io/lava-arch?rev=689108f00d72d5c2f0ca0c27ada5249d2c151f07#689108f00d72d5c2f0ca0c27ada5249d2c151f07"
-dependencies = [
- "indexmap",
- "lava-core",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "lava-arch"
-version = "0.2.3"
-source = "git+https://github.com/pleme-io/lava-arch?rev=035f2f547e299048d96484ef118bada964f96d47#035f2f547e299048d96484ef118bada964f96d47"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30f4b5d269163d0770c5f1209cccb510c5079134d2ebd7d3fdbd57b752448282"
 dependencies = [
  "indexmap",
  "lava-core",
@@ -70,7 +59,7 @@ name = "lava-architectures"
 version = "0.2.8"
 dependencies = [
  "indexmap",
- "lava-arch 0.2.3",
+ "lava-arch",
  "lava-contracts",
  "lava-core",
  "lava-eval",
@@ -96,7 +85,8 @@ dependencies = [
 [[package]]
 name = "lava-core"
 version = "0.2.3"
-source = "git+https://github.com/pleme-io/lava-core?rev=f7530d06a52c3356d81415c6611c5ccd2c8cbd06#f7530d06a52c3356d81415c6611c5ccd2c8cbd06"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7340661feb33aa7f2a0bc13ce082b0bed3553530581b857ad2a28a7e4b12d57e"
 dependencies = [
  "indexmap",
  "serde",
@@ -107,11 +97,12 @@ dependencies = [
 
 [[package]]
 name = "lava-eval"
-version = "0.2.4"
-source = "git+https://github.com/pleme-io/lava-eval?rev=1b8959e92067e1bbbaa3dfad4b54d4a79098de69#1b8959e92067e1bbbaa3dfad4b54d4a79098de69"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "255f29841b09b1d0270242ce060269dcd3e1c9ea79910e8c607cb6eb8bd16d81"
 dependencies = [
  "indexmap",
- "lava-arch 0.2.2",
+ "lava-arch",
  "lava-core",
  "lava-schema",
  "lava-types",
@@ -135,7 +126,8 @@ dependencies = [
 [[package]]
 name = "lava-test"
 version = "0.2.1"
-source = "git+https://github.com/pleme-io/lava-test?rev=bce9f25947610af7206f74b612d5ff73307c27bd#bce9f25947610af7206f74b612d5ff73307c27bd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a672bead648d2c88f78a739e0bfd6d2e5f941bfc04f542babaa4e4a934b3b4b9"
 dependencies = [
  "indexmap",
  "lava-core",
