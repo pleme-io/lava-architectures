@@ -12,8 +12,9 @@
 //! first-failure-wins.
 
 // Test-only lint waivers: `Default::default()` on a locally-typed accumulator
-// is more readable than restating the concrete type at the call site.
-#![allow(clippy::default_trait_access)]
+// is more readable than restating the concrete type at the call site, and
+// items-after-statements pins const tables next to the test that reads them.
+#![allow(clippy::default_trait_access, clippy::items_after_statements)]
 
 use std::collections::BTreeMap;
 
