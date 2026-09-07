@@ -1,0 +1,39 @@
+# publishability-lint baseline -- the SHRINK-ONLY ratchet.
+#
+# TSV: <path>\t<rule-id>\t<reason>
+#
+# `<path>` is the tracked file path as `git ls-files` prints it (no leading
+# `./`). `<rule-id>` is the rule's IDENTITY, never the matched text -- the same
+# discipline as rules.txt: a baseline that quoted the account id it waives
+# would republish it on every clone. Rule ids are printed by the run:
+#
+#   deny:<needle>          a shipped deny-substring row
+#   digit-run:<len>        the inverted digit-run rule
+#   resource-id:<prefix>   an inverted prefix-hexbody rule
+#
+# A row therefore grants a per-FILE, per-RULE permission. That is coarse on
+# purpose (it is the banned-tool-lint key shape), and the coarseness is exactly
+# why the reverse check below matters.
+#
+# ── CHECKED IN BOTH DIRECTIONS ────────────────────────────────────────────
+#
+# A row that matches NO finding is an ERROR, not tidy bookkeeping. The forward
+# check alone ("is every finding baselined?") lets a cleanup succeed while its
+# row survives, and the row keeps granting that file standing permission for
+# that rule -- so the SAME disclosure reappearing at the SAME path, for a new
+# reason the stated one never covered, is reported as "baselined" and the run
+# stays green. It is also the only way the sweep can ever report DONE: both
+# counters reaching zero is the finish line, and a one-directional check cannot
+# observe it.
+#
+# ── WHAT MAY NOT BE BASELINED ─────────────────────────────────────────────
+#
+# A finding from `extra-deny-substrings` (rule id `deny:extra#N`) is NOT stably
+# baselineable and that is deliberate. The id is positional, so it moves when
+# the caller's list changes -- and more to the point, a real customer or tenant
+# name sitting in a public repo is a thing to DELETE, never a thing to waive.
+# If one is found, fix the file.
+#
+# Empty today: this action ships with no debt, because it is new. A repo
+# adopting the gate runs it once with fail-on-violation: false, and lands its
+# existing findings here with a stated reason each, in one commit.

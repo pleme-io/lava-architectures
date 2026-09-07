@@ -1,0 +1,90 @@
+# publishability-lint rule table.
+#
+# TSV. One row is the whole act of adding a rule. Blank lines and `#` comments
+# are dropped. Three classes, and the class is the FIRST field:
+#
+#   deny-substring        <needle>\t<reason>
+#   allowlist-digit-run   <len>\t<allowed,csv>\t<reason>
+#   prefix-hexbody        <prefix>\t<minlen>\t<allowed,csv>\t<reason>
+#
+# ── ★ THIS FILE SHIPS IN A PUBLIC REPO. IT CARRIES NO SECRET. ─────────────
+#
+# A detector must not carry what it detects. The magma reference this engine
+# was lifted from used to name the host's real AWS account as a constant so it
+# could grep for it -- which, on a public repo, publishes the one string the
+# check exists to keep out, and that literal was in fact the LAST copy of that
+# account left in the repo after the 2026-08-17 sweep. The check existed, was
+# green, and was the leak.
+#
+# So: no real account number, no real customer or tenant name, no real resource
+# id may ever appear in this file. Two of the three classes are INVERTED for
+# exactly that reason -- they state the SHAPE of the thing and the small set of
+# reserved placeholders that are allowed to wear it, and everything else of that
+# shape is a finding. An inverted rule publishes nothing AND is strictly
+# stronger than a deny-list: it catches the ids nobody remembered to add.
+#
+# ── WHAT IS DELIBERATELY NOT SEEDED HERE, AND WHY ─────────────────────────
+#
+# The sweep's biggest category was real DEPLOYMENT NAMES -- cluster names,
+# environment names, an internal DNS zone, a skunkworks environment's name.
+# That category cannot be expressed as a shape: "a word" has no distinguishing
+# form, so the only possible rule is a literal, and a literal here would be the
+# disclosure. There is no version of this file that both names them and is
+# publishable.
+#
+# They are therefore supplied by the CALLER at run time, never by this repo,
+# through the `extra-deny-substrings` input -- meant to be fed from a GitHub
+# Actions secret, so the needles live in the org's secret store and enter no
+# tree. A hit on one of those is reported REDACTED (rule id + location, never
+# the needle), so the gate cannot publish the name in a public CI log either.
+# See the README, "The names that cannot live here".
+#
+# Also deliberately out of scope, because another gate already owns it:
+#   * credential material (AKIA…, private keys, tokens)  -> `secrets-scan`
+#   * runtime tool installation                          -> `runtime-install-lint`
+#   * banned external tools                              -> `banned-tool-lint`
+# Duplicating those here would give two gates one job and neither the reason.
+
+# ── deny-substring ────────────────────────────────────────────────────────
+# Lowercased substring. Only shapes that name NOBODY are allowed here. Each of
+# these is a live endpoint hostname suffix: the presence of one means the text
+# is quoting somebody's running estate rather than an example, and the suffix
+# alone identifies no account, tenant or cluster.
+deny-substring	.eks.amazonaws.com	An EKS control-plane endpoint. The host part is a live cluster; replace the whole URL with https://example-eks.invalid or a placeholder.
+deny-substring	.rds.amazonaws.com	An RDS instance endpoint. Use db.example.invalid.
+deny-substring	.cache.amazonaws.com	An ElastiCache endpoint. Use cache.example.invalid.
+deny-substring	.elb.amazonaws.com	A live load-balancer hostname. Use lb.example.invalid.
+deny-substring	.dkr.ecr.	A private ECR registry host. Use registry.example.invalid or ghcr.io/<org>.
+
+# ── allowlist-digit-run (INVERTED) ────────────────────────────────────────
+# Any MAXIMAL run of exactly <len> digits that is not one of the reserved
+# placeholders. Maximal matters: a 13-digit millisecond timestamp is one run of
+# 13 and is not a hit, whereas a naive \d{12} would find a 12-digit slice of it.
+# The three allowed values are AWS's own documentation placeholders.
+allowlist-digit-run	12	000000000000,123456789012,111122223333	Looks like a real AWS account id (or a GCP project number). Use 000000000000, 123456789012 or 111122223333 -- the id is never the point of an example.
+
+# ── prefix-hexbody (INVERTED) ─────────────────────────────────────────────
+# <prefix> followed by >= <minlen> hex characters, anchored on a word boundary
+# so `myvpc-0123abcd` and `msg-0123abcd` are not hits. The allowed bodies are
+# the canonical documentation placeholders.
+#
+# `i-` is the one row with real false-positive exposure (any word ending in a
+# non-word char, then `i-`, then 8+ hex). It is kept because instance ids are
+# exactly what leaks out of a rendered user_data or a captured tfstate, and a
+# false positive here costs one baseline row.
+prefix-hexbody	vpc-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real VPC id. Use vpc-0123456789abcdef0.
+prefix-hexbody	subnet-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real subnet id. Use subnet-0123456789abcdef0.
+prefix-hexbody	sg-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real security-group id. Use sg-0123456789abcdef0.
+prefix-hexbody	eni-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real network-interface id. Use eni-0123456789abcdef0.
+prefix-hexbody	igw-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real internet-gateway id. Use igw-0123456789abcdef0.
+prefix-hexbody	nat-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real NAT-gateway id. Use nat-0123456789abcdef0.
+prefix-hexbody	eipalloc-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real elastic-IP allocation id. Use eipalloc-0123456789abcdef0.
+prefix-hexbody	acl-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real network-ACL id. Use acl-0123456789abcdef0.
+prefix-hexbody	rtb-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real route-table id. Use rtb-0123456789abcdef0.
+prefix-hexbody	tgw-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real transit-gateway id. Use tgw-0123456789abcdef0.
+prefix-hexbody	pcx-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real VPC-peering id. Use pcx-0123456789abcdef0.
+prefix-hexbody	dopt-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real DHCP-options id. Use dopt-0123456789abcdef0.
+prefix-hexbody	ami-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real AMI id. Use ami-0123456789abcdef0.
+prefix-hexbody	vol-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real EBS volume id. Use vol-0123456789abcdef0.
+prefix-hexbody	snap-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real EBS snapshot id. Use snap-0123456789abcdef0.
+prefix-hexbody	i-	8	0123456789abcdef0,0a1b2c3d,0e1f2a3b	A real EC2 instance id. Use i-0123456789abcdef0.
