@@ -390,7 +390,7 @@ mod integration_tests {
 
     /// End-to-end byte-equivalence test. Loads aws-vpc-network.tlisp,
     /// evaluates with default inputs, renders terraform.json, validates
-    /// every field the pangea aws_vpc_network_spec asserts. Same state
+    /// every field the pangea `aws_vpc_network_spec` asserts. Same state
     /// file emerges from `tofu apply` and `magma apply`.
     #[test]
     fn aws_vpc_network_tlisp_renders_byte_equivalent_to_pangea_spec() {
@@ -502,7 +502,7 @@ mod integration_tests {
     }
 
     /// Akeyless secrets architecture emits all six resource types with
-    /// the path-prefixed names pangea's akeyless_secrets_spec asserts.
+    /// the path-prefixed names pangea's `akeyless_secrets_spec` asserts.
     #[test]
     fn akeyless_secrets_tlisp_renders_full_resource_set() {
         let bindings = InputBindings::new();

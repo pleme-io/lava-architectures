@@ -50,7 +50,7 @@ fn an_empty_repo_bag_is_a_successful_render_of_nothing() {
     let types = json
         .get("resource")
         .and_then(|r| r.as_object())
-        .map_or(0, |o| o.len());
+        .map_or(0, serde_json::Map::len);
     assert_eq!(
         types, 0,
         "expected the empty bag to render zero resource types, got {types}"
@@ -247,8 +247,7 @@ fn a_record_missing_a_gated_only_field_fails_the_whole_render() {
     b.set_records("repos", vec![repo]);
 
     let err = eval_architecture(&src, &b)
-        .err()
-        .expect("a record missing a gated-only field must FAIL, not skip");
+        .expect_err("a record missing a gated-only field must FAIL, not skip");
     let msg = err.to_string();
     assert!(
         msg.contains("ci_shim_slug"),

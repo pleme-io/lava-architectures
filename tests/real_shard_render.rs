@@ -1,7 +1,7 @@
 //! PROOF: lava renders the REAL pleme-io-opensource shard-0 data.
 //!
 //! Fixture is produced by pangea-architectures/bin/lava-resolve-org and
-//! supplied via LAVA_SHARD_FIXTURE. Skips when absent so CI stays green
+//! supplied via `LAVA_SHARD_FIXTURE`. Skips when absent so CI stays green
 //! without it — the point is the local end-to-end proof, not a pinned blob.
 use lava_architectures::{ARCHITECTURE_DIR, eval_architecture};
 use lava_eval::InputBindings;
@@ -48,7 +48,7 @@ fn renders_the_real_shard_zero() {
     let repos_out = res["github_repository"].as_object().expect("repos").len();
     let perms = res["github_actions_repository_permissions"]
         .as_object()
-        .map_or(0, |o| o.len());
+        .map_or(0, serde_json::Map::len);
 
     println!(
         "REAL RENDER: declared={declared} github_repository={repos_out} actions_perms={perms}"

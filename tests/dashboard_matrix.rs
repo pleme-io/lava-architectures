@@ -328,7 +328,7 @@ fn declared_datasources_and_query_references_agree() {
 ///
 /// Measured 2026-08-11 and the reason this table is not longer: the
 /// akeyless gateway metric family (`gateway_auth_total` and friends, which
-/// SecretsPlatformOverview / AuthMethodHealth / SecurityPostureBoard are
+/// `SecretsPlatformOverview` / `AuthMethodHealth` / `SecurityPostureBoard` are
 /// built on) returns an EMPTY series on akeyless's own Datadog over a 2h
 /// window. Those three boards are therefore NOT in the catalogue — porting
 /// them faithfully would ship exactly the empty-panel failure above, three
@@ -368,7 +368,7 @@ const PROVEN_SERIES: &[(&str, &str)] = &[
     ),
 ];
 
-/// What one production cluster's own VictoriaMetrics actually held,
+/// What one production cluster's own `VictoriaMetrics` actually held,
 /// 2026-08-11 23:40Z, queried through a port-forward to that cluster's
 /// `victoria-metrics-k8s-stack` vmsingle in `monitoring`.
 ///
@@ -378,16 +378,16 @@ const PROVEN_SERIES: &[(&str, &str)] = &[
 /// board ships that renders empty. Two of these were found exactly that
 /// way, after the boards were already written:
 ///
-///   breathe_band_util_ratio                  present, non-empty
-///   breathe_band_dry_run                     present  (all ==1; ZERO ==0)
-///   kube_pod_info                            present, non-empty
-///   container_memory_working_set_bytes       present, non-empty
-///   container_cpu_usage_seconds_total        present, non-empty
-///   scrape_duration_seconds                  present, non-empty
-///   scrape_samples_scraped                   present, non-empty
-///   vector_component_errors_total            0   <-- DEPLOYED, UNSCRAPED
-///   vector_component_discarded_events_total  0   <-- same
-///   gateway_auth_total                       0   <-- no instrumentation
+///   `breathe_band_util_ratio`                  present, non-empty
+///   `breathe_band_dry_run`                     present  (all ==1; ZERO ==0)
+///   `kube_pod_info`                            present, non-empty
+///   `container_memory_working_set_bytes`       present, non-empty
+///   `container_cpu_usage_seconds_total`        present, non-empty
+///   `scrape_duration_seconds`                  present, non-empty
+///   `scrape_samples_scraped`                   present, non-empty
+///   `vector_component_errors_total`            0   <-- DEPLOYED, UNSCRAPED
+///   `vector_component_discarded_events_total`  0   <-- same
+///   `gateway_auth_total`                       0   <-- no instrumentation
 ///
 ///   count by (namespace) (up):  monitoring 8, breathe-system 9, keda 6,
 ///                               keda-http 2, and ONE apiece in the cell's
