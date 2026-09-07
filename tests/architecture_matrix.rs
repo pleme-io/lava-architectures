@@ -372,6 +372,15 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
                 bag.insert(k.to_string(), v.to_string());
             }
         }
+        "pleme-io-dns" => {
+            for (k, v) in [
+                ("account-id", "00000000000000000000000000000000"),
+                ("dkim-record", "v=DKIM1; k=rsa; p=matrix-placeholder"),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
         "pleme-io-server" => {
             // The channel lists have no interface default, so the matrix must
             // supply them — and it supplies the REAL ones, read back out of

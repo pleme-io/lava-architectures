@@ -206,6 +206,10 @@ fn apply_required_bindings(
             ("zone-id", "Z0000000000000000000"),
             ("domain", "smoke.example.com"),
         ],
+        "pleme-io-dns" => &[
+            ("account-id", "00000000000000000000000000000000"),
+            ("dkim-record", "v=DKIM1; k=rsa; p=smoke-placeholder"),
+        ],
         _ => &[],
     };
     for (k, v) in pairs {

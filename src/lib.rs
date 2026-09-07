@@ -94,6 +94,10 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("dns-record-set-typed", 4),         // apex + www + mx + verify
     ("backup-recovery-multi-region", 3), // primary + secondary + plan
     ("cilium-irsa-variants", 3),         // 3 IRSA roles
+    // 1 zone + 5 MX (Google Workspace) + SPF + DKIM + DMARC = 9. Preserves
+    // pleme.io email 1:1 through the Porkbun→Cloudflare cutover and adds
+    // DMARC hardening. CAA is a follow-up PR — needs a structured :data.
+    ("pleme-io-dns", 9),
 ];
 
 /// Derived view of the typed interface registered alongside each
