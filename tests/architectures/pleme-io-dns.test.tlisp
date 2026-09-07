@@ -1,0 +1,25 @@
+(deflava-test pleme-io-dns/default
+  :architecture pleme-io-dns
+  :bindings (:account-id "00000000000000000000000000000000"
+             :dkim-record "v=DKIM1; k=rsa; p=smoke-placeholder"
+             :dmarc-rua "mailto:smoke@pleme.io")
+  :assertions ((resource-exists cloudflare-zone "pleme.io")
+               (resource-exists cloudflare-dns-record "mx-primary")
+               (resource-exists cloudflare-dns-record "mx-alt1")
+               (resource-exists cloudflare-dns-record "mx-alt2")
+               (resource-exists cloudflare-dns-record "mx-alt3")
+               (resource-exists cloudflare-dns-record "mx-alt4")
+               (resource-exists cloudflare-dns-record "spf")
+               (resource-exists cloudflare-dns-record "dkim-google")
+               (resource-exists cloudflare-dns-record "dmarc")
+               (resource-count cloudflare-dns-record 8)
+               (attribute-equals cloudflare-zone "pleme.io" :zone "pleme.io")
+               (attribute-equals cloudflare-dns-record "mx-primary" :type "MX")
+               (attribute-equals cloudflare-dns-record "mx-primary" :priority 1)
+               (attribute-equals cloudflare-dns-record "mx-alt1" :priority 5)
+               (attribute-equals cloudflare-dns-record "mx-alt3" :priority 10)
+               (attribute-equals cloudflare-dns-record "spf" :type "TXT")
+               (attribute-equals cloudflare-dns-record "spf" :content "v=spf1 include:_spf.google.com ~all")
+               (attribute-equals cloudflare-dns-record "dkim-google" :name "google._domainkey")
+               (attribute-equals cloudflare-dns-record "dmarc" :name "_dmarc")
+               (ref-valid)))

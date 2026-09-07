@@ -154,7 +154,7 @@ enum CliError {
 /// Render the JSON to a byte string that is stable across runs and
 /// pleasant in a diff.
 ///
-/// Two-space indent (serde_json's pretty default) plus a trailing
+/// Two-space indent (`serde_json`'s pretty default) plus a trailing
 /// newline. The newline is not decoration: without it every regeneration
 /// shows up in `git diff` as a `\ No newline at end of file` marker on the
 /// last line, which makes a one-panel change look like a two-line change.
@@ -281,7 +281,11 @@ fn available_in(dir: &Path) -> Vec<String> {
 /// A bare name resolves against the dashboards directory; anything
 /// carrying a path separator or a `.tlisp` suffix is a path.
 fn looks_like_a_path(arg: &str) -> bool {
-    arg.ends_with(".tlisp") || arg.contains(std::path::MAIN_SEPARATOR) || arg.contains('/')
+    std::path::Path::new(arg)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("tlisp"))
+        || arg.contains(std::path::MAIN_SEPARATOR)
+        || arg.contains('/')
 }
 
 fn resolve(arg: &str, dir: &Path) -> Result<(String, PathBuf), CliError> {
@@ -340,7 +344,7 @@ fn run(a: Args) -> Result<Vec<u8>, CliError> {
     if !missing.is_empty() {
         return Err(CliError::MissingParams {
             name,
-            missing: joined(missing.into_iter()),
+            missing: joined(missing),
             required: joined(&required),
         });
     }
@@ -348,7 +352,7 @@ fn run(a: Args) -> Result<Vec<u8>, CliError> {
     if !unknown.is_empty() {
         return Err(CliError::UnknownParams {
             name,
-            unknown: joined(unknown.into_iter()),
+            unknown: joined(unknown),
             required: joined(&required),
         });
     }

@@ -2,6 +2,10 @@
 //! against its target bundled architecture. Failures aggregate per
 //! ★★ CLOSED-LOOP MASS-SYNTHESIS into one assertion report.
 
+// Test-only lint waiver: per-architecture bindings match arms often collapse
+// to the same shape, but keeping them enumerated makes the fixture readable.
+#![allow(clippy::match_same_arms)]
+
 use indexmap::IndexMap;
 use lava_architectures::{ARCHITECTURE_DIR, eval_architecture};
 use lava_eval::InputBindings;
@@ -205,6 +209,10 @@ fn apply_required_bindings(
         "dns-record-set-typed" => &[
             ("zone-id", "Z0000000000000000000"),
             ("domain", "smoke.example.com"),
+        ],
+        "pleme-io-dns" => &[
+            ("account-id", "00000000000000000000000000000000"),
+            ("dkim-record", "v=DKIM1; k=rsa; p=smoke-placeholder"),
         ],
         _ => &[],
     };
