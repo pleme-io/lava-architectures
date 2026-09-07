@@ -11,6 +11,10 @@
 //! reported in one assert, so CI shows the whole picture rather than
 //! first-failure-wins.
 
+// Test-only lint waivers: `Default::default()` on a locally-typed accumulator
+// is more readable than restating the concrete type at the call site.
+#![allow(clippy::default_trait_access)]
+
 use std::collections::BTreeMap;
 
 use lava_core::Theme;

@@ -291,11 +291,9 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
             }
         }
         "cluster-autoscaler-iam" => {
-            {
-                let (k, v) = ("cluster-name", "matrix");
-                b.set_str(k, v);
-                bag.insert(k.to_string(), v.to_string());
-            }
+            let (k, v) = ("cluster-name", "matrix");
+            b.set_str(k, v);
+            bag.insert(k.to_string(), v.to_string());
         }
         "cloudflare-tunnel-ingress" => {
             for (k, v) in [
@@ -361,11 +359,9 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
             }
         }
         "azure-aks-cluster" => {
-            {
-                let (k, v) = ("resource-group", "matrix-rg");
-                b.set_str(k, v);
-                bag.insert(k.to_string(), v.to_string());
-            }
+            let (k, v) = ("resource-group", "matrix-rg");
+            b.set_str(k, v);
+            bag.insert(k.to_string(), v.to_string());
         }
         "cilium-irsa-variants" => {
             for (k, v) in [
