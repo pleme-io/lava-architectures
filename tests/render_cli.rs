@@ -12,6 +12,11 @@
 //! Sibling of `dashboard_matrix.rs`, which owns the *content* of the
 //! catalogue. This file owns the *entry point*.
 
+// Test-only lint waivers: `args` / `argv` naming is idiomatic when building
+// argv-style fixtures, and match_same_arms across CLI response branches makes
+// the branch intent explicit.
+#![allow(clippy::similar_names, clippy::match_same_arms)]
+
 use std::collections::BTreeMap;
 use std::process::{Command, Output};
 

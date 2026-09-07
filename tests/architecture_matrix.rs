@@ -20,6 +20,16 @@
 //! reported in one assert at the end. CI surface stays green/red
 //! per-architecture-class, not first-failure-wins.
 
+// Test-only lint waivers: this file catalogues per-architecture fixture
+// bindings via one long match, and hex/decimal permission constants and
+// Discord snowflakes lose meaning when broken up with underscore separators.
+#![allow(
+    clippy::too_many_lines,
+    clippy::match_same_arms,
+    clippy::needless_continue,
+    clippy::unreadable_literal
+)]
+
 use indexmap::IndexMap;
 use lava_architectures::{
     ARCHITECTURE_DIR, BUNDLED_ARCHITECTURES, eval_architecture, interface_for,
