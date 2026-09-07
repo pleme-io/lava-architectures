@@ -133,7 +133,7 @@ pub fn bundled_source(name: &str) -> Option<String> {
 pub const ARCHITECTURE_DIR: &str = "architectures";
 
 /// Convenience: load + evaluate one of the bundled architectures by
-/// name. Looks up `architectures/<name>.tlisp` relative to CARGO_MANIFEST_DIR.
+/// name. Looks up `architectures/<name>.tlisp` relative to `CARGO_MANIFEST_DIR`.
 ///
 /// # Errors
 /// Returns [`EvalError::NotArchForm`] wrapping the I/O failure if the
@@ -238,8 +238,8 @@ fn strip_comments(src: &str) -> String {
 ///
 /// The grammar is deliberately narrow — `[A-Za-z_][A-Za-z0-9_]*` — because
 /// a brace in one of these documents is far more often NOT a placeholder:
-/// `{namespace=\"prod\"}` is a LogsQL stream selector and `up{job=…}`
-/// is a PromQL matcher. Both are rejected by the grammar (they carry `=`
+/// `{namespace=\"prod\"}` is a `LogsQL` stream selector and `up{job=…}`
+/// is a `PromQL` matcher. Both are rejected by the grammar (they carry `=`
 /// and quotes), so a scan for "any `{`" would report a leak on every
 /// correctly-rendered board and get switched off within a week.
 fn scan_placeholders(masked: &str, out: &mut BTreeSet<String>) {
