@@ -240,7 +240,8 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
             bag.insert("operator-cidrs".to_string(), "203.0.113.0/32".to_string());
         }
         "aws-eks-cluster" => {
-            for (k, v) in [("name", "matrix")] {
+            {
+                let (k, v) = ("name", "matrix");
                 b.set_str(k, v);
                 bag.insert(k.to_string(), v.to_string());
             }
@@ -280,7 +281,8 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
             }
         }
         "cluster-autoscaler-iam" => {
-            for (k, v) in [("cluster-name", "matrix")] {
+            {
+                let (k, v) = ("cluster-name", "matrix");
                 b.set_str(k, v);
                 bag.insert(k.to_string(), v.to_string());
             }
@@ -349,7 +351,8 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
             }
         }
         "azure-aks-cluster" => {
-            for (k, v) in [("resource-group", "matrix-rg")] {
+            {
+                let (k, v) = ("resource-group", "matrix-rg");
                 b.set_str(k, v);
                 bag.insert(k.to_string(), v.to_string());
             }
@@ -417,7 +420,8 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
         "discord-server-baseline" => {
             // A Discord snowflake — 18 digits, string-typed on the wire even
             // though it is numeric, which is how the provider models every id.
-            for (k, v) in [("server-id", "111122223333444455")] {
+            {
+                let (k, v) = ("server-id", "111122223333444455");
                 b.set_str(k, v);
                 bag.insert(k.to_string(), v.to_string());
             }
@@ -535,7 +539,7 @@ fn matrix_covers_every_architecture_file_on_disk() {
 }
 
 /// Every registered Interface must also list every architecture in
-/// BUNDLED_ARCHITECTURES — partition-completeness check.
+/// `BUNDLED_ARCHITECTURES` — partition-completeness check.
 #[test]
 fn every_bundled_architecture_has_a_registered_interface() {
     let unregistered: Vec<&str> = BUNDLED_ARCHITECTURES
@@ -673,7 +677,7 @@ fn every_pleme_io_category_is_reachable_by_some_role() {
     }
 
     // And the public front door really is public.
-    let welcome = format!("${{discord_text_channel.welcome.id}}");
+    let welcome = "${discord_text_channel.welcome.id}".to_string();
     assert!(
         targeted.iter().any(|t| t == &welcome),
         "#welcome carries no @everyone overwrite — the server would have no \
