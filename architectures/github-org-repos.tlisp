@@ -31,6 +31,7 @@
   :inputs ((:owner :type :string :required #t)
     (:repos :type (:list-of :string) :required #t)
     (:labels :type (:list-of :string) :required #t)
+    (:moves :type (:list-of :string) :default ())
     (:repo-count :type :string :default "0"))
   :outputs ((:repo-count :type :string)))
 
@@ -38,6 +39,7 @@
   :inputs ((:owner "pleme-io")
     (:repos ())
     (:labels ())
+    (:moves ())
     (:repo_count "0"))
 
   :resources (
@@ -125,7 +127,16 @@
       (import
         "github_repository.{repo_slug}"
         "{repo_name}"
-        :when "{repo_exists_on_github}")))
+        :when "{repo_exists_on_github}"))
+
+    ;; ── ★ RENAMES ARE MOVES ────────────────────────────────────────────
+    ;; Every address here derives from the repo's name, so a rename would
+    ;; plan as destroy(old) + create(new). The caller resolves a row's
+    ;; `renamed_from` into one record per address the row actually emits
+    ;; (`move_from`, `move_to`, both full addresses), and each becomes a
+    ;; terraform moved block: the provider renames the repository in place.
+    (for-each ((i move) (enumerate moves))
+      (moved "{move_from}" "{move_to}")))
 
   :outputs (:repo_count "{repo_count}")
   :result (github-org-repos :repo-count "{repo_count}"))
