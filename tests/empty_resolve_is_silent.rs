@@ -89,11 +89,10 @@ fn the_empty_render_carries_no_signal_that_resolve_failed() {
 //     enforce_admins, require_signed_commits, required_linear_history
 //
 // What the LAVA PORT emits:
-//   repository_id, pattern, required_status_checks_strict, enforce_admins
+//   repository_id, pattern, enforce_admins
 //
 // So the port DROPS four attributes the Ruby always sets — allows_deletions,
-// allows_force_pushes, require_signed_commits, required_linear_history — and
-// ADDS one the Ruby never sets, required_status_checks_strict. Migrating
+// allows_force_pushes, require_signed_commits, required_linear_history. Migrating
 // as-is would UNLOCK force-pushes and branch deletion on every repo that
 // currently has them locked.
 //
@@ -155,7 +154,7 @@ fn protected_repo_render() -> serde_json::Value {
 }
 
 #[test]
-fn branch_protection_emits_exactly_two_policy_attributes() {
+fn branch_protection_emits_exactly_one_policy_attribute() {
     let json = protected_repo_render();
     let bp = json
         .get("resource")
@@ -172,12 +171,7 @@ fn branch_protection_emits_exactly_two_policy_attributes() {
     keys.sort_unstable();
     assert_eq!(
         keys,
-        vec![
-            "enforce_admins",
-            "pattern",
-            "repository_id",
-            "required_status_checks_strict"
-        ],
+        vec!["enforce_admins", "pattern", "repository_id"],
         "the ported branch-protection surface changed. If this WIDENED toward \
          PROFILES (dismiss_stale_reviews, required_reviews, require_signed_commits, \
          require_linear_history) that is the migration gap closing — update this \

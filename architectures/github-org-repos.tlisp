@@ -113,7 +113,6 @@
         :when "{repo_has_branch_protection}"
         :repository_id (ref github-repository "{repo_slug}" node_id)
         :pattern "{repo_default_branch}"
-        :required_status_checks_strict "{repo_bp_strict}"
         :enforce_admins "{repo_bp_enforce_admins}"))
 
     ;; ── ★ ADOPT-NOT-CREATE ─────────────────────────────────────────────
