@@ -133,6 +133,7 @@ fn protected_repo_render() -> serde_json::Value {
         ("has_issues", "true"),
         ("delete_branch_on_merge", "true"),
         ("actions_enabled", "true"),
+        ("actions_disabled", "false"),
         ("standard_labels", "false"),
         ("has_branch_protection", "true"),
         ("bp_strict", "true"),
@@ -229,6 +230,7 @@ fn a_record_missing_a_gated_only_field_fails_the_whole_render() {
         ("has_issues", "true"),
         ("delete_branch_on_merge", "true"),
         ("actions_enabled", "true"),
+        ("actions_disabled", "false"),
         ("standard_labels", "false"),
         ("has_branch_protection", "false"),
         ("bp_strict", "false"),
@@ -247,4 +249,65 @@ fn a_record_missing_a_gated_only_field_fails_the_whole_render() {
         msg.contains("ci_shim_slug"),
         "expected the failure to name the missing field, got: {msg}"
     );
+}
+
+fn actions_render(enabled: bool) -> serde_json::Value {
+    let src = std::fs::read_to_string(
+        std::path::Path::new(ARCHITECTURE_DIR).join("github-org-repos.tlisp"),
+    )
+    .expect("github-org-repos source");
+    let mut b = InputBindings::default();
+    b.set_str("owner", "pleme-io");
+    b.set_str("repo_count", "1");
+    let on = if enabled { "true" } else { "false" };
+    let off = if enabled { "false" } else { "true" };
+    let mut repo = BTreeMap::new();
+    for (k, v) in [
+        ("name", "actions-probe"),
+        ("slug", "actions_probe"),
+        ("description", "actions surface probe"),
+        ("visibility", "private"),
+        ("archived", "false"),
+        ("default_branch", "main"),
+        ("has_issues", "true"),
+        ("delete_branch_on_merge", "true"),
+        ("actions_enabled", on),
+        ("actions_disabled", off),
+        ("standard_labels", "false"),
+        ("has_branch_protection", "false"),
+        ("bp_strict", "false"),
+        ("bp_enforce_admins", "false"),
+        ("has_ci_shim", "false"),
+        ("ci_shim_slug", ""),
+        ("ci_shim_path", ""),
+        ("ci_shim_content", ""),
+        ("exists_on_github", "true"),
+    ] {
+        repo.insert(k.to_string(), v.to_string());
+    }
+    b.set_records("repos", vec![repo]);
+    eval_architecture(&src, &b)
+        .expect("evaluates")
+        .render_terraform_json()
+        .expect("renders")
+}
+
+#[test]
+fn actions_permissions_emit_allowed_actions_only_when_enabled() {
+    for enabled in [true, false] {
+        let json = actions_render(enabled);
+        let perms = json["resource"]["github_actions_repository_permissions"]
+            .as_object()
+            .expect("one actions-permissions family");
+        assert_eq!(perms.len(), 1, "exactly one resource per repo, on or off");
+        let body = perms["actions_probe_actions"]
+            .as_object()
+            .expect("addressed by slug");
+        assert_eq!(body["enabled"], serde_json::Value::Bool(enabled));
+        assert_eq!(
+            body.contains_key("allowed_actions"),
+            enabled,
+            "GitHub reads allowed_actions back as \"\" on a disabled repo"
+        );
+    }
 }

@@ -84,9 +84,16 @@
     (for-each ((i repo) (enumerate repos))
       (github-actions-repository-permissions
         "{repo_slug}_actions"
+        :when "{repo_actions_enabled}"
         :repository (ref github-repository "{repo_slug}" name)
         :enabled "{repo_actions_enabled}"
         :allowed_actions "all"))
+    (for-each ((i repo) (enumerate repos))
+      (github-actions-repository-permissions
+        "{repo_slug}_actions"
+        :when "{repo_actions_disabled}"
+        :repository (ref github-repository "{repo_slug}" name)
+        :enabled "{repo_actions_enabled}"))
 
     ;; ── ★ CI SHIM ──────────────────────────────────────────────────────
     ;; Path and content arrive as FIELDS. The Ruby generates the workflow body

@@ -141,6 +141,7 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
                 ("has_issues", "true"),
                 ("delete_branch_on_merge", "true"),
                 ("actions_enabled", "true"),
+                ("actions_disabled", "false"),
                 ("standard_labels", "true"),
                 ("has_branch_protection", "true"),
                 ("bp_strict", "true"),
