@@ -253,7 +253,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.2.11";
+        version = "0.2.12";
         edition = "2024";
         crateBin = [
           {
