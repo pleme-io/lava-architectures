@@ -359,7 +359,7 @@ fn linked_role_metadata_renders_one_or_two_entries() {
     assert_eq!(entries[0]["type"], 2);
     assert_eq!(
         one["resource"]["discord_role_connection_metadata"]["acme-linked"]["application_id"],
-        serde_json::json!(555_566_667_777_888_899_i64)
+        fx::APPLICATION_ID
     );
 
     let two = rows_with(|b| b.set_records("linked-roles", vec![fx::linked_role("acme-linked", true)]));
@@ -388,7 +388,7 @@ fn stickers_and_messages_render_with_the_provider_types() {
 fn member_role_rows_render_the_role_block() {
     let json = render_full();
     let grant = &json["resource"]["discord_member_roles"]["acme-founder-grant"];
-    assert_eq!(grant["user_id"], serde_json::json!(222_233_334_444_555_566_i64));
+    assert_eq!(grant["user_id"], fx::USER_ID);
     let role = grant["role"].as_array().expect("block list");
     assert_eq!(role.len(), 1);
     assert_eq!(role[0]["role_id"], "${discord_role.acme-founder.id}");

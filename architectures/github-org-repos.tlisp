@@ -29,8 +29,10 @@
 (deflava-interface github-org-repos
   :doc "Repository posture for a GitHub org, one row per catalogued repo"
   :inputs ((:owner :type :string :required #t)
-    (:repos :type (:list-of :string) :required #t)
-    (:labels :type (:list-of :string) :required #t)
+    (:repos :type (:list-of :string) :required #t
+      :fields (:has_issues :boolean :archived :boolean :delete_branch_on_merge :boolean :actions_enabled :boolean :bp_enforce_admins :boolean))
+    (:labels :type (:list-of :string) :required #t
+      :fields (:color :string))
     (:moves :type (:list-of :string) :default ())
     (:repo-count :type :string :default "0"))
   :outputs ((:repo-count :type :string)))

@@ -2,7 +2,8 @@
   :doc "Route 53 DNS for a company from flat records: one hosted zone per zone row and one record per record row. Route 53 rejects two records with one name and type, so a row is one (zone, name, type) and carries every value in values, joined with a pipe. A row whose apply field is false is a placeholder awaiting a provider value and is never emitted."
   :inputs ((:region :type :string :required #f)
     (:zones :type (:list-of :string) :required #t)
-    (:dns-records :type (:list-of :string) :required #t))
+    (:dns-records :type (:list-of :string) :required #t
+      :fields (:ttl :integer)))
   :outputs ())
 
 (deflava-architecture company-dns

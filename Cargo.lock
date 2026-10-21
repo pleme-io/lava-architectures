@@ -103,9 +103,9 @@ dependencies = [
 
 [[package]]
 name = "lava-eval"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ae714e64c6b9a4a830086da62c06595417752c7eebd4ee78e2cb81a2dcb1711"
+checksum = "4609143b7fcc6628d51e786b21af718291702336ee9c7554efbacba423cf6b00"
 dependencies = [
  "indexmap",
  "lava-arch",

@@ -31,7 +31,7 @@ thiserror = "2"
 lava-core = "0.2"
 lava-arch = "0.2"
 lava-contracts = "0.2"
-lava-eval = "0.2"
+lava-eval = "0.2.8"
 lava-schema = "0.1"
 lava-types = "0.1"
 
