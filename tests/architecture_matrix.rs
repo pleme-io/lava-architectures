@@ -34,6 +34,10 @@
 #[path = "common/discord_server_fixture.rs"]
 mod discord_server_fixture;
 
+#[allow(dead_code)]
+#[path = "common/company_fixture.rs"]
+mod company_fixture;
+
 use indexmap::IndexMap;
 use lava_architectures::{
     ARCHITECTURE_DIR, BUNDLED_ARCHITECTURES, eval_architecture, interface_for,
@@ -428,6 +432,20 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
             b.set_records("channels", discord_server_fixture::channels());
             b.set_records("permissions", discord_server_fixture::permissions());
             for k in ["roles", "categories", "channels", "permissions"] {
+                bag.insert(k.to_string(), "acme".to_string());
+            }
+        }
+        "company-dns" => {
+            b.set_records("zones", company_fixture::zones());
+            b.set_records("dns-records", company_fixture::dns_records());
+            for k in ["zones", "dns-records"] {
+                bag.insert(k.to_string(), "acme".to_string());
+            }
+        }
+        "company-edge" => {
+            b.set_records("edge-sites", company_fixture::edge_sites());
+            b.set_records("edge-aliases", company_fixture::edge_aliases());
+            for k in ["edge-sites", "edge-aliases"] {
                 bag.insert(k.to_string(), "acme".to_string());
             }
         }

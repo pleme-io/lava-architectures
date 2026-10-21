@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "861d655207970c0aa31a5c912a6168fdc486a9427951f73112e4e4b087675f1c",
+  "cargo_lock_sha256": "af4dac0790f7110fc8977a21f62ade6454fee8e68c67621e8a736127d243cfc8",
   "manifest_sha256": {
     "Cargo.toml": "583b778feac4778f8a23fb38dfbfc7749af6f52767eab55b382869bf1d0163fe"
   },
@@ -85,7 +85,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "lava-arch-0.2.2": {
+      "lava-arch-0.2.5": {
         "runtime_dependencies": [
           {
             "name": "indexmap",
@@ -161,7 +161,7 @@
           },
           {
             "name": "lava_arch",
-            "package_key": "lava-arch-0.2.2",
+            "package_key": "lava-arch-0.2.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -191,7 +191,7 @@
           },
           {
             "name": "lava_eval",
-            "package_key": "lava-eval-0.2.3",
+            "package_key": "lava-eval-0.2.7",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -357,7 +357,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "lava-eval-0.2.3": {
+      "lava-eval-0.2.7": {
         "runtime_dependencies": [
           {
             "name": "indexmap",
@@ -373,7 +373,7 @@
           },
           {
             "name": "lava_arch",
-            "package_key": "lava-arch-0.2.2",
+            "package_key": "lava-arch-0.2.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -523,7 +523,7 @@
           },
           {
             "name": "lava_eval",
-            "package_key": "lava-eval-0.2.3",
+            "package_key": "lava-eval-0.2.7",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1172,7 +1172,7 @@
     "itoa-1.0.18": {
       "edition": "2021"
     },
-    "lava-arch-0.2.2": {
+    "lava-arch-0.2.5": {
       "edition": "2024"
     },
     "lava-architectures-0.2.10": {
@@ -1194,7 +1194,7 @@
     "lava-core-0.2.4": {
       "edition": "2024"
     },
-    "lava-eval-0.2.3": {
+    "lava-eval-0.2.7": {
       "edition": "2024"
     },
     "lava-schema-0.1.8": {

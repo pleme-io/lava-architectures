@@ -1,0 +1,30 @@
+(deflava-interface company-dns
+  :doc "Route 53 DNS for a company from flat records: one hosted zone per zone row and one record per record row. A record row holds one value; a multi-value set is several rows."
+  :inputs ((:region :type :string :required #f)
+    (:zones :type (:list-of :string) :required #t)
+    (:dns-records :type (:list-of :string) :required #t))
+  :outputs ())
+
+(deflava-architecture company-dns
+  :inputs ((:region "us-east-1")
+    (:zones ())
+    (:dns-records ()))
+
+  :providers ((aws :region "{region}"))
+
+  :resources (
+    (for-each ((i zone) (enumerate zones))
+      (aws-route53-zone
+        "{zone_key}"
+        :name "{zone_name}"))
+
+    (for-each ((i record) (enumerate dns-records))
+      (aws-route53-record
+        "{record_slug}"
+        :zone-id (ref aws-route53-zone "{record_zone}" zone_id)
+        :name "{record_name}"
+        :type "{record_type}"
+        :ttl "{record_ttl}"
+        :records ("{record_value}"))))
+
+  :outputs ())

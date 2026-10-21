@@ -1,0 +1,101 @@
+(deflava-interface company-edge
+  :doc "CloudFront edge for a company from flat records. A site row names the HTTPS origin host, its path prefix, the comma-joined host list and its behaviour: kind (static or service), cache (optimized or disabled), all_methods (true or false) and origin_request (none or all_viewer_except_host), each resolved to an AWS managed policy id or method list through locals; an alias row is one host of a site and the name of the Route 53 zone that holds it. One ACM certificate (us-east-1, DNS validated), one distribution and one A and AAAA alias pair per host."
+  :inputs ((:region :type :string :required #f)
+    (:edge-sites :type (:list-of :string) :required #t)
+    (:edge-aliases :type (:list-of :string) :required #t))
+  :outputs ())
+
+(deflava-architecture company-edge
+  :inputs ((:region "us-east-1")
+    (:edge-sites ())
+    (:edge-aliases ()))
+
+  :providers ((aws :region "{region}")
+    (aws :alias "us_east_1" :region "us-east-1"))
+
+  :locals (:cache_policy (:optimized "658327ea-f89d-4fab-a63d-7e88639e58f6"
+      :disabled "4135ea2d-6df8-44a3-9df3-4b5a84be39ad")
+    :origin_request_policy (:all_viewer_except_host "b689b0a8-53d0-40ab-baf2-68738e2966ac")
+    :allowed_methods (:false ("GET" "HEAD" "OPTIONS")
+      :true ("GET" "HEAD" "OPTIONS" "PUT" "POST" "PATCH" "DELETE")))
+
+  :data (
+    (for-each ((i alias) (enumerate edge-aliases))
+      (aws-route53-zone
+        "{alias_slug}"
+        :name "{alias_zone}"
+        :private-zone #f)))
+
+  :resources (
+    (for-each ((i site) (enumerate edge-sites))
+      (aws-acm-certificate
+        "{site_site}"
+        :provider "aws.us_east_1"
+        :domain-name "${split(\",\", \"{site_hosts}\")[0]}"
+        :subject-alternative-names "${split(\",\", \"{site_hosts}\")}"
+        :validation-method "DNS"
+        :lifecycle (:create_before_destroy #t)))
+
+    (for-each ((i alias) (enumerate edge-aliases))
+      (aws-route53-record
+        "{alias_slug}-validation"
+        :zone-id (ref data.aws-route53-zone "{alias_slug}" zone_id)
+        :allow-overwrite #t
+        :name "${{for dvo in aws_acm_certificate.{alias_site}.domain_validation_options : dvo.domain_name => dvo}[\"{alias_host}\"].resource_record_name}"
+        :type "${{for dvo in aws_acm_certificate.{alias_site}.domain_validation_options : dvo.domain_name => dvo}[\"{alias_host}\"].resource_record_type}"
+        :ttl 60
+        :records ("${{for dvo in aws_acm_certificate.{alias_site}.domain_validation_options : dvo.domain_name => dvo}[\"{alias_host}\"].resource_record_value}")))
+
+    (for-each ((i site) (enumerate edge-sites))
+      (aws-acm-certificate-validation
+        "{site_site}"
+        :provider "aws.us_east_1"
+        :certificate-arn (ref aws-acm-certificate "{site_site}" arn)))
+
+    (for-each ((i site) (enumerate edge-sites))
+      (aws-cloudfront-distribution
+        "{site_site}"
+        :enabled #t
+        :is-ipv6-enabled #t
+        :comment "{site_site} {site_kind}"
+        :aliases "${split(\",\", \"{site_hosts}\")}"
+        :origin (:domain_name "{site_origin_host}"
+          :origin_id "{site_site}"
+          :origin_path "{site_origin_path}"
+          :custom_origin_config (:http_port 80
+            :https_port 443
+            :origin_protocol_policy "https-only"
+            :origin_ssl_protocols ("TLSv1.2")))
+        :default-cache-behavior (:target_origin_id "{site_site}"
+          :viewer_protocol_policy "redirect-to-https"
+          :allowed_methods "${local.allowed_methods[\"{site_all_methods}\"]}"
+          :cached_methods ("GET" "HEAD")
+          :compress #t
+          :cache_policy_id "${local.cache_policy[\"{site_cache}\"]}"
+          :origin_request_policy_id "${lookup(local.origin_request_policy, \"{site_origin_request}\", null)}")
+        :restrictions (:geo_restriction (:restriction_type "none"))
+        :viewer-certificate (:acm_certificate_arn (ref aws-acm-certificate-validation "{site_site}" certificate_arn)
+          :ssl_support_method "sni-only"
+          :minimum_protocol_version "TLSv1.2_2021")))
+
+    (for-each ((i alias) (enumerate edge-aliases))
+      (aws-route53-record
+        "{alias_slug}-a"
+        :zone-id (ref data.aws-route53-zone "{alias_slug}" zone_id)
+        :name "{alias_host}"
+        :type "A"
+        :alias (:name (ref aws-cloudfront-distribution "{alias_site}" domain_name)
+          :zone_id (ref aws-cloudfront-distribution "{alias_site}" hosted_zone_id)
+          :evaluate_target_health #f)))
+
+    (for-each ((i alias) (enumerate edge-aliases))
+      (aws-route53-record
+        "{alias_slug}-aaaa"
+        :zone-id (ref data.aws-route53-zone "{alias_slug}" zone_id)
+        :name "{alias_host}"
+        :type "AAAA"
+        :alias (:name (ref aws-cloudfront-distribution "{alias_site}" domain_name)
+          :zone_id (ref aws-cloudfront-distribution "{alias_site}" hosted_zone_id)
+          :evaluate_target_health #f))))
+
+  :outputs ())

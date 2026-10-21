@@ -52,6 +52,8 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("cloudflare-dns-records", 5), // root + www + api + wildcard + acme
     ("discord-server-baseline", 3), // moderator role + category + text channel
     ("discord-server", 12), // 3 roles + 2 categories + 4 channels + 3 overwrites
+    ("company-dns", 8), // 2 zones + 6 records
+    ("company-edge", 12), // cert + validation + distribution + 3 validation records + 3 A + 3 AAAA
     ("pleme-io-server", 44), // the whole server: 13 resource types, 44 resources
     ("akeyless-secrets", 6), // ci_auth + k8s_auth + db_pwd + api_key + db_target + role
     ("cloudflare-r2-bucket", 4), // bucket + cors + custom-domain + cname
