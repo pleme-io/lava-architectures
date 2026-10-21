@@ -1,0 +1,200 @@
+;; pleme-io-dns.tlisp — declarative DNS for pleme.io on Cloudflare.
+;;
+;; Codifies the pleme.io zone as it will exist AFTER the Porkbun
+;; migration lands: Cloudflare as authoritative DNS, Google Workspace
+;; kept as the email provider, with hardening (DMARC) added on top.
+;;
+;; Preserves 1:1 the records that currently live on Google Cloud DNS
+;; (MX x5 for Google Workspace, SPF, DKIM), so the nameserver cutover
+;; is a no-op for every resolver — same answers from the new NS.
+;;
+;; NOT INCLUDED in this first pass (deliberate scope caps):
+;;   - CAA records — needs the :data structured attribute + a decision
+;;     on which CAs to authorize. Follow-up PR.
+;;   - Additional subdomains (docs, api, grafana, node hostnames, …)
+;;     from the "use pleme.io for everything" scope — those land per
+;;     batch, each as its own PR against this file.
+;;
+;; The DKIM record body and Cloudflare account-id are required inputs.
+;; Bind the DKIM value at apply time from the live record
+;;   dig google._domainkey.pleme.io TXT +short @8.8.8.8
+;; or from the Google Workspace admin console. Not embedded here so
+;; source-of-truth for a Workspace-managed key stays with Workspace.
+
+(deflava-interface pleme-io-dns
+  :doc "pleme.io Cloudflare zone + Google Workspace email + DMARC"
+  :inputs ((:account-id :type :string :required #t)
+    (:dkim-record :type :string :required #t)
+    (:dmarc-rua :type :string :default "mailto:luis@pleme.io"))
+  :outputs ((:zone-id :type :string :required #t)
+    (:mx-record-ids :type (:list-of :string))))
+
+(deflava-architecture pleme-io-dns
+  :inputs ((:account-id "00000000000000000000000000000000")
+    (:dkim-record "v=DKIM1; k=rsa; p=placeholder")
+    (:dmarc-rua "mailto:luis@pleme.io"))
+
+  :resources ((cloudflare-zone
+     "pleme.io"
+     :account-id
+     "{account-id}"
+     :zone
+     "pleme.io"
+     :type
+     "full"
+     :plan
+     "free")
+
+    ;; ── Google Workspace MX bundle ─────────────────────────────
+    ;; Copied 1:1 from `dig pleme.io MX +short @8.8.8.8` on 2026-08-20.
+    ;; Priorities: 1 primary, 5 x2 secondary, 10 x2 tertiary — Google's
+    ;; standard Workspace layout.
+    (cloudflare-dns-record
+      "mx-primary"
+      :zone-id
+      (ref cloudflare-zone "pleme.io" id)
+      :name
+      "@"
+      :type
+      "MX"
+      :content
+      "aspmx.l.google.com"
+      :priority
+      1
+      :ttl
+      3600
+      :comment
+      "Google Workspace primary MX")
+
+    (cloudflare-dns-record
+      "mx-alt1"
+      :zone-id
+      (ref cloudflare-zone "pleme.io" id)
+      :name
+      "@"
+      :type
+      "MX"
+      :content
+      "alt1.aspmx.l.google.com"
+      :priority
+      5
+      :ttl
+      3600
+      :comment
+      "Google Workspace alt1 MX")
+
+    (cloudflare-dns-record
+      "mx-alt2"
+      :zone-id
+      (ref cloudflare-zone "pleme.io" id)
+      :name
+      "@"
+      :type
+      "MX"
+      :content
+      "alt2.aspmx.l.google.com"
+      :priority
+      5
+      :ttl
+      3600
+      :comment
+      "Google Workspace alt2 MX")
+
+    (cloudflare-dns-record
+      "mx-alt3"
+      :zone-id
+      (ref cloudflare-zone "pleme.io" id)
+      :name
+      "@"
+      :type
+      "MX"
+      :content
+      "alt3.aspmx.l.google.com"
+      :priority
+      10
+      :ttl
+      3600
+      :comment
+      "Google Workspace alt3 MX")
+
+    (cloudflare-dns-record
+      "mx-alt4"
+      :zone-id
+      (ref cloudflare-zone "pleme.io" id)
+      :name
+      "@"
+      :type
+      "MX"
+      :content
+      "alt4.aspmx.l.google.com"
+      :priority
+      10
+      :ttl
+      3600
+      :comment
+      "Google Workspace alt4 MX")
+
+    ;; ── SPF ───────────────────────────────────────────────────
+    ;; Authorizes Google's sending infrastructure. `~all` = soft-fail
+    ;; (mark unauthorized senders, don't reject). Copied 1:1 from live.
+    (cloudflare-dns-record
+      "spf"
+      :zone-id
+      (ref cloudflare-zone "pleme.io" id)
+      :name
+      "@"
+      :type
+      "TXT"
+      :content
+      "v=spf1 include:_spf.google.com ~all"
+      :ttl
+      3600
+      :comment
+      "SPF — authorize Google Workspace to send as pleme.io")
+
+    ;; ── DKIM ──────────────────────────────────────────────────
+    ;; Google Workspace signs outbound mail with this key. Selector is
+    ;; `google` — matches the `google._domainkey.pleme.io` record that
+    ;; already exists on Google Cloud DNS.
+    (cloudflare-dns-record
+      "dkim-google"
+      :zone-id
+      (ref cloudflare-zone "pleme.io" id)
+      :name
+      "google._domainkey"
+      :type
+      "TXT"
+      :content
+      "{dkim-record}"
+      :ttl
+      3600
+      :comment
+      "DKIM — Google Workspace signing key (bind at apply time)")
+
+    ;; ── DMARC ─────────────────────────────────────────────────
+    ;; NEW — absent on the current Google Cloud DNS zone.
+    ;; Policy `p=none` is report-only for the first 30 days: aggregate
+    ;; reports flow to `dmarc-rua` so we see who's sending as pleme.io
+    ;; before tightening to `quarantine` or `reject`.
+    (cloudflare-dns-record
+      "dmarc"
+      :zone-id
+      (ref cloudflare-zone "pleme.io" id)
+      :name
+      "_dmarc"
+      :type
+      "TXT"
+      :content
+      "v=DMARC1; p=none; rua={dmarc-rua}"
+      :ttl
+      3600
+      :comment
+      "DMARC report-only — tighten to p=quarantine after 30 days of reports"))
+
+  :result (pleme-io-dns
+    :zone-id (ref cloudflare-zone "pleme.io" id)
+    :mx-record-ids ((ref cloudflare-dns-record "mx-primary" id)
+      (ref cloudflare-dns-record "mx-alt1" id)
+      (ref cloudflare-dns-record "mx-alt2" id)
+      (ref cloudflare-dns-record "mx-alt3" id)
+      (ref cloudflare-dns-record "mx-alt4" id))))
