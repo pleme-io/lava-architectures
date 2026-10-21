@@ -1,10 +1,22 @@
 (deflava-interface discord-server
-  :doc "A Discord server from flat records: one row per role, category, channel and permission overwrite. Every channel row names its category by slug; kind flags (is_text, is_voice, is_forum) select the resource."
+  :doc "A Discord server from flat records: one row per role, category, channel and permission overwrite, plus optional rows for guild settings, @everyone, widget, system channel, announcement channels, webhooks, invites, onboarding, linked-role metadata, member roles, stickers and messages. Every channel row names its category by slug; kind flags (is_text, is_voice, is_forum) select the resource. A row that points at a channel or role names it by slug, so every reference resolves inside this document."
   :inputs ((:server-id :type :string :required #t)
     (:roles :type (:list-of :string) :required #t)
     (:categories :type (:list-of :string) :required #t)
     (:channels :type (:list-of :string) :required #t)
-    (:permissions :type (:list-of :string) :required #t))
+    (:permissions :type (:list-of :string) :required #t)
+    (:settings :type (:list-of :string) :default ())
+    (:everyone :type (:list-of :string) :default ())
+    (:widgets :type (:list-of :string) :default ())
+    (:system-channels :type (:list-of :string) :default ())
+    (:news-channels :type (:list-of :string) :default ())
+    (:webhooks :type (:list-of :string) :default ())
+    (:invites :type (:list-of :string) :default ())
+    (:onboardings :type (:list-of :string) :default ())
+    (:linked-roles :type (:list-of :string) :default ())
+    (:member-roles :type (:list-of :string) :default ())
+    (:stickers :type (:list-of :string) :default ())
+    (:messages :type (:list-of :string) :default ()))
   :outputs ((:server-id :type :string)))
 
 (deflava-architecture discord-server
@@ -12,7 +24,19 @@
     (:roles ())
     (:categories ())
     (:channels ())
-    (:permissions ()))
+    (:permissions ())
+    (:settings ())
+    (:everyone ())
+    (:widgets ())
+    (:system-channels ())
+    (:news-channels ())
+    (:webhooks ())
+    (:invites ())
+    (:onboardings ())
+    (:linked-roles ())
+    (:member-roles ())
+    (:stickers ())
+    (:messages ()))
 
   :resources (
     (for-each ((i role) (enumerate roles))
@@ -101,4 +125,142 @@
         :overwrite-id (ref discord-role "{permission_role_slug}" id)
         :type "role"
         :allow "{permission_allow}"
-        :deny "{permission_deny}"))))
+        :deny "{permission_deny}"))
+
+    (for-each ((i setting) (enumerate settings))
+      (discord-managed-server
+        "{setting_slug}"
+        :server-id "{server-id}"
+        :name "{setting_name}"
+        :description "{setting_description}"
+        :verification-level "{setting_verification_level}"
+        :explicit-content-filter "{setting_explicit_content_filter}"
+        :default-message-notifications "{setting_default_message_notifications}"
+        :afk-timeout "{setting_afk_timeout}"))
+
+    (for-each ((i entry) (enumerate everyone))
+      (discord-role-everyone
+        "{entry_slug}"
+        :server-id "{server-id}"
+        :permissions "{entry_permissions}"))
+
+    (for-each ((i widget) (enumerate widgets))
+      (discord-server-widget
+        "{widget_slug}"
+        :server-id "{server-id}"
+        :enabled "{widget_enabled}"
+        :channel-id (ref discord-text-channel "{widget_channel_slug}" id)))
+
+    (for-each ((i system) (enumerate system-channels))
+      (discord-system-channel
+        "{system_slug}"
+        :server-id "{server-id}"
+        :system-channel-id (ref discord-text-channel "{system_channel_slug}" id)
+        :system-channel-flags "{system_flags}"))
+
+    (for-each ((i news) (enumerate news-channels))
+      (discord-news-channel
+        "{news_slug}"
+        :server-id "{server-id}"
+        :name "{news_name}"
+        :topic "{news_topic}"
+        :nsfw "{news_nsfw}"
+        :position "{news_position}"
+        :category (ref discord-category-channel "{news_category_slug}" id)))
+
+    (for-each ((i hook) (enumerate webhooks))
+      (discord-webhook
+        "{hook_slug}"
+        :when "{hook_on_text}"
+        :name "{hook_name}"
+        :channel-id (ref discord-text-channel "{hook_channel_slug}" id)))
+
+    (for-each ((i hook) (enumerate webhooks))
+      (discord-webhook
+        "{hook_slug}"
+        :when "{hook_on_news}"
+        :name "{hook_name}"
+        :channel-id (ref discord-news-channel "{hook_channel_slug}" id)))
+
+    (for-each ((i invite) (enumerate invites))
+      (discord-invite
+        "{invite_slug}"
+        :when "{invite_on_text}"
+        :channel-id (ref discord-text-channel "{invite_channel_slug}" id)
+        :max-age "{invite_max_age}"
+        :max-uses "{invite_max_uses}"
+        :temporary "{invite_temporary}"
+        :unique "{invite_unique}"))
+
+    (for-each ((i invite) (enumerate invites))
+      (discord-invite
+        "{invite_slug}"
+        :when "{invite_on_voice}"
+        :channel-id (ref discord-voice-channel "{invite_channel_slug}" id)
+        :max-age "{invite_max_age}"
+        :max-uses "{invite_max_uses}"
+        :temporary "{invite_temporary}"
+        :unique "{invite_unique}"))
+
+    (for-each ((i onboarding) (enumerate onboardings))
+      (discord-server-onboarding
+        "{onboarding_slug}"
+        :server-id "{server-id}"
+        :enabled "{onboarding_enabled}"
+        :mode "{onboarding_mode}"
+        :default-channel-ids ((ref discord-text-channel "{onboarding_default_1}" id)
+          (ref discord-text-channel "{onboarding_default_2}" id)
+          (ref discord-text-channel "{onboarding_default_3}" id)
+          (ref discord-text-channel "{onboarding_default_4}" id)
+          (ref discord-text-channel "{onboarding_default_5}" id)
+          (ref discord-text-channel "{onboarding_default_6}" id)
+          (ref discord-text-channel "{onboarding_default_7}" id))))
+
+    (for-each ((i linked) (enumerate linked-roles))
+      (discord-role-connection-metadata
+        "{linked_slug}"
+        :when "{linked_single}"
+        :application-id "{linked_application_id}"
+        :metadata ((:key "{linked_key_1}"
+            :name "{linked_name_1}"
+            :description "{linked_description_1}"
+            :type "{linked_type_1}"))))
+
+    (for-each ((i linked) (enumerate linked-roles))
+      (discord-role-connection-metadata
+        "{linked_slug}"
+        :when "{linked_double}"
+        :application-id "{linked_application_id}"
+        :metadata ((:key "{linked_key_1}"
+            :name "{linked_name_1}"
+            :description "{linked_description_1}"
+            :type "{linked_type_1}")
+          (:key "{linked_key_2}"
+            :name "{linked_name_2}"
+            :description "{linked_description_2}"
+            :type "{linked_type_2}"))))
+
+    (for-each ((i grant) (enumerate member-roles))
+      (discord-member-roles
+        "{grant_slug}"
+        :server-id "{server-id}"
+        :user-id "{grant_user_id}"
+        :role ((:role_id (ref discord-role "{grant_role_slug}" id)
+            :has_role "{grant_has_role}"))))
+
+    (for-each ((i sticker) (enumerate stickers))
+      (discord-guild-sticker
+        "{sticker_slug}"
+        :server-id "{server-id}"
+        :name "{sticker_name}"
+        :tags "{sticker_tags}"
+        :description "{sticker_description}"
+        :file "{sticker_file}"))
+
+    (for-each ((i message) (enumerate messages))
+      (discord-message
+        "{message_slug}"
+        :channel-id (ref discord-text-channel "{message_channel_slug}" id)
+        :content "{message_content}"
+        :pinned "{message_pinned}"
+        :tts "{message_tts}"))))

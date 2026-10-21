@@ -429,9 +429,38 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
             bag.insert(k.to_string(), v.to_string());
             b.set_records("roles", discord_server_fixture::roles());
             b.set_records("categories", discord_server_fixture::categories());
-            b.set_records("channels", discord_server_fixture::channels());
+            b.set_records("channels", discord_server_fixture::full_channels());
             b.set_records("permissions", discord_server_fixture::permissions());
-            for k in ["roles", "categories", "channels", "permissions"] {
+            b.set_records("settings", discord_server_fixture::settings());
+            b.set_records("everyone", discord_server_fixture::everyone());
+            b.set_records("widgets", discord_server_fixture::widgets());
+            b.set_records("system-channels", discord_server_fixture::system_channels());
+            b.set_records("news-channels", discord_server_fixture::news_channels());
+            b.set_records("webhooks", discord_server_fixture::webhooks());
+            b.set_records("invites", discord_server_fixture::invites());
+            b.set_records("onboardings", discord_server_fixture::onboardings());
+            b.set_records("linked-roles", discord_server_fixture::linked_roles());
+            b.set_records("member-roles", discord_server_fixture::member_roles());
+            b.set_records("stickers", discord_server_fixture::stickers());
+            b.set_records("messages", discord_server_fixture::messages());
+            for k in [
+                "roles",
+                "categories",
+                "channels",
+                "permissions",
+                "settings",
+                "everyone",
+                "widgets",
+                "system-channels",
+                "news-channels",
+                "webhooks",
+                "invites",
+                "onboardings",
+                "linked-roles",
+                "member-roles",
+                "stickers",
+                "messages",
+            ] {
                 bag.insert(k.to_string(), "acme".to_string());
             }
         }
