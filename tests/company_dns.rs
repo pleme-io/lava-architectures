@@ -58,7 +58,7 @@ fn addresses_come_from_the_key_and_slug_fields() {
     );
     assert_eq!(
         names(&json, "aws_route53_record"),
-        sorted(&["acme-mx", "acme-spf", "acme-dkim", "acme-dmarc", "acme-status", "labs-caa"])
+        sorted(&["acme-mx", "acme-txt", "acme-dkim", "acme-dmarc", "acme-status", "labs-caa"])
     );
 }
 
@@ -74,6 +74,9 @@ fn every_cross_reference_resolves() {
                 let Some(inner) = s.strip_prefix("${").and_then(|r| r.strip_suffix('}')) else {
                     continue;
                 };
+                if inner.contains('(') {
+                    continue;
+                }
                 let parts: Vec<&str> = inner.split('.').collect();
                 assert_eq!(parts.len(), 3, "{ty}.{label}.{attr}: odd reference {s}");
                 let target = &resources
@@ -103,15 +106,48 @@ fn scalars_render_with_the_provider_types() {
     let records = &json["resource"]["aws_route53_record"];
     assert_eq!(records["acme-mx"]["type"], "MX");
     assert_eq!(records["acme-mx"]["ttl"], 3600);
-    assert_eq!(records["acme-mx"]["records"], serde_json::json!(["10 mail.acme-mail.example"]));
     assert_eq!(
-        records["acme-spf"]["records"],
-        serde_json::json!(["v=spf1 include:_spf.acme-mail.example ~all"])
+        records["acme-mx"]["records"],
+        "${split(\"|\", \"10 mail.acme-mail.example|20 mail2.acme-mail.example\")}"
+    );
+    assert_eq!(
+        records["acme-txt"]["records"],
+        "${split(\"|\", \"v=spf1 include:_spf.acme-mail.example ~all|acme-site-verification=abc123\")}"
+    );
+    assert_eq!(
+        records["acme-status"]["records"],
+        "${split(\"|\", \"192.0.2.10\")}"
     );
     assert_eq!(records["acme-dkim"]["type"], "CNAME");
     assert_eq!(records["acme-dmarc"]["name"], "_dmarc.acme.example");
-    assert_eq!(records["labs-caa"]["records"], serde_json::json!(["0 issue \"amazon.com\""]));
+    assert_eq!(
+        records["labs-caa"]["records"],
+        "${split(\"|\", \"0 issue \\\"amazon.com\\\"\")}"
+    );
     assert_eq!(records["acme-status"]["ttl"], 300);
+}
+
+#[test]
+fn a_pending_row_is_never_emitted() {
+    let json = render();
+    let records = &json["resource"]["aws_route53_record"];
+    assert!(records.get("acme-dkim2").is_none());
+    assert!(!json.to_string().contains("PENDING-"));
+}
+
+#[test]
+fn one_record_per_zone_name_and_type() {
+    let json = render();
+    let records = json["resource"]["aws_route53_record"].as_object().expect("records");
+    let mut keys: Vec<String> = records
+        .values()
+        .map(|r| format!("{}|{}|{}", r["zone_id"], r["name"], r["type"]))
+        .collect();
+    let before = keys.len();
+    keys.sort();
+    keys.dedup();
+    assert_eq!(keys.len(), before);
+    assert_eq!(records["acme-mx"]["name"], records["acme-txt"]["name"]);
 }
 
 #[test]

@@ -1,5 +1,5 @@
 (deflava-interface company-dns
-  :doc "Route 53 DNS for a company from flat records: one hosted zone per zone row and one record per record row. A record row holds one value; a multi-value set is several rows."
+  :doc "Route 53 DNS for a company from flat records: one hosted zone per zone row and one record per record row. Route 53 rejects two records with one name and type, so a row is one (zone, name, type) and carries every value in values, joined with a pipe. A row whose apply field is false is a placeholder awaiting a provider value and is never emitted."
   :inputs ((:region :type :string :required #f)
     (:zones :type (:list-of :string) :required #t)
     (:dns-records :type (:list-of :string) :required #t))
@@ -21,10 +21,11 @@
     (for-each ((i record) (enumerate dns-records))
       (aws-route53-record
         "{record_slug}"
+        :when "{record_apply}"
         :zone-id (ref aws-route53-zone "{record_zone}" zone_id)
         :name "{record_name}"
         :type "{record_type}"
         :ttl "{record_ttl}"
-        :records ("{record_value}"))))
+        :records "${split(\"|\", \"{record_values}\")}")))
 
   :outputs ())

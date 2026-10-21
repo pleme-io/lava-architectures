@@ -190,7 +190,7 @@ fn reference_count(json: &serde_json::Value) -> usize {
 fn every_cross_reference_resolves() {
     let json = render();
     assert_eq!(dangling_references(&json), Vec::<String>::new());
-    assert_eq!(reference_count(&json), 50, "reference count drifted");
+    assert_eq!(reference_count(&json), 54, "reference count drifted");
 }
 
 #[test]
@@ -430,4 +430,30 @@ fn empty_lists_render_no_resources() {
 fn the_interface_is_registered() {
     let i = interface_for("company-edge").expect("interface");
     assert_eq!(i.name, "company-edge");
+}
+
+#[test]
+fn the_certificate_validation_waits_for_its_validation_records() {
+    let json = render();
+    let v = &json["resource"]["aws_acm_certificate_validation"];
+    assert_eq!(
+        v["acme"]["validation_record_fqdns"],
+        "${[aws_route53_record.acme-apex-validation.fqdn,aws_route53_record.acme-www-validation.fqdn,aws_route53_record.acme-labs-validation.fqdn]}"
+    );
+    assert_eq!(
+        v["acme-api"]["validation_record_fqdns"],
+        "${[aws_route53_record.acme-api-validation.fqdn]}"
+    );
+    assert_eq!(dangling_references(&json), Vec::<String>::new());
+}
+
+#[test]
+fn a_validation_fqdn_naming_no_record_is_caught() {
+    let mut sites = fx::edge_sites();
+    sites[1].insert(
+        "validation_fqdns".to_string(),
+        "aws_route53_record.acme-api-gone.fqdn".to_string(),
+    );
+    let json = render_with(&fx::edge_bindings(sites, fx::edge_aliases()));
+    assert!(dangling_references(&json).iter().any(|b| b == "aws_route53_record.acme-api-gone"));
 }

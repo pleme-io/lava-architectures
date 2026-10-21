@@ -1,5 +1,5 @@
 (deflava-interface company-edge
-  :doc "CloudFront edge for a company from flat records. A site row names the HTTPS origin host, its path prefix, the comma-joined host list and its behaviour: kind (static or service), cache (optimized or disabled), all_methods (true or false) and origin_request (none or all_viewer_except_host), each resolved to an AWS managed policy id or method list through locals; an alias row is one host of a site and the name of the Route 53 zone that holds it. One ACM certificate (us-east-1, DNS validated), one distribution and one A and AAAA alias pair per host."
+  :doc "CloudFront edge for a company from flat records. A site row names the HTTPS origin host, its path prefix, the comma-joined host list and its behaviour: kind (static or service), cache (optimized or disabled), all_methods (true or false) and origin_request (none or all_viewer_except_host), each resolved to an AWS managed policy id or method list through locals; an alias row is one host of a site and the name of the Route 53 zone that holds it. A site row also carries validation_fqdns, the comma-joined fqdn references of its validation records (aws_route53_record.<alias slug>-validation.fqdn), so the certificate validation waits for the records. One ACM certificate (us-east-1, DNS validated), one distribution and one A and AAAA alias pair per host."
   :inputs ((:region :type :string :required #f)
     (:edge-sites :type (:list-of :string) :required #t)
     (:edge-aliases :type (:list-of :string) :required #t))
@@ -50,7 +50,8 @@
       (aws-acm-certificate-validation
         "{site_site}"
         :provider "aws.us_east_1"
-        :certificate-arn (ref aws-acm-certificate "{site_site}" arn)))
+        :certificate-arn (ref aws-acm-certificate "{site_site}" arn)
+        :validation-record-fqdns "${[{site_validation_fqdns}]}"))
 
     (for-each ((i site) (enumerate edge-sites))
       (aws-cloudfront-distribution
