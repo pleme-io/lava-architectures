@@ -253,7 +253,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.2.12";
+        version = "0.2.13";
         edition = "2024";
         crateBin = [
           {
@@ -384,9 +384,9 @@ rec {
       };
       "lava-eval" = rec {
         crateName = "lava-eval";
-        version = "0.2.7";
+        version = "0.2.8";
         edition = "2024";
-        sha256 = "048prcnimf1civklxggfqx97fhcmcp065nl6021lm6kb9kk19rvs";
+        sha256 = "003brwis9jxsxxa7b77f6qip14c2f6pj2svq3vajhrncgwxi82a6";
         libName = "lava_eval";
         authors = [
           "pleme-io"
