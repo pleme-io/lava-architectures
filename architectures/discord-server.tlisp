@@ -1,0 +1,104 @@
+(deflava-interface discord-server
+  :doc "A Discord server from flat records: one row per role, category, channel and permission overwrite. Every channel row names its category by slug; kind flags (is_text, is_voice, is_forum) select the resource."
+  :inputs ((:server-id :type :string :required #t)
+    (:roles :type (:list-of :string) :required #t)
+    (:categories :type (:list-of :string) :required #t)
+    (:channels :type (:list-of :string) :required #t)
+    (:permissions :type (:list-of :string) :required #t))
+  :outputs ((:server-id :type :string)))
+
+(deflava-architecture discord-server
+  :inputs ((:server-id "111122223333444455")
+    (:roles ())
+    (:categories ())
+    (:channels ())
+    (:permissions ()))
+
+  :resources (
+    (for-each ((i role) (enumerate roles))
+      (discord-role
+        "{role_slug}"
+        :server-id "{server-id}"
+        :name "{role_name}"
+        :color "{role_color}"
+        :hoist "{role_hoist}"
+        :mentionable "{role_mentionable}"
+        :permissions "{role_permissions}"))
+
+    (for-each ((i category) (enumerate categories))
+      (discord-category-channel
+        "{category_slug}"
+        :server-id "{server-id}"
+        :name "{category_name}"
+        :position "{category_position}"))
+
+    (for-each ((i channel) (enumerate channels))
+      (discord-text-channel
+        "{channel_slug}"
+        :when "{channel_is_text}"
+        :server-id "{server-id}"
+        :name "{channel_name}"
+        :topic "{channel_topic}"
+        :nsfw "{channel_nsfw}"
+        :position "{channel_position}"
+        :category (ref discord-category-channel "{channel_category_slug}" id)))
+
+    (for-each ((i channel) (enumerate channels))
+      (discord-voice-channel
+        "{channel_slug}"
+        :when "{channel_is_voice}"
+        :server-id "{server-id}"
+        :name "{channel_name}"
+        :position "{channel_position}"
+        :category (ref discord-category-channel "{channel_category_slug}" id)))
+
+    (for-each ((i channel) (enumerate channels))
+      (discord-forum-channel
+        "{channel_slug}"
+        :when "{channel_is_forum}"
+        :server-id "{server-id}"
+        :name "{channel_name}"
+        :topic "{channel_topic}"
+        :nsfw "{channel_nsfw}"
+        :position "{channel_position}"
+        :category (ref discord-category-channel "{channel_category_slug}" id)))
+
+    (for-each ((i permission) (enumerate permissions))
+      (discord-channel-permission
+        "{permission_slug}"
+        :when "{permission_on_text}"
+        :channel-id (ref discord-text-channel "{permission_channel_slug}" id)
+        :overwrite-id (ref discord-role "{permission_role_slug}" id)
+        :type "role"
+        :allow "{permission_allow}"
+        :deny "{permission_deny}"))
+
+    (for-each ((i permission) (enumerate permissions))
+      (discord-channel-permission
+        "{permission_slug}"
+        :when "{permission_on_voice}"
+        :channel-id (ref discord-voice-channel "{permission_channel_slug}" id)
+        :overwrite-id (ref discord-role "{permission_role_slug}" id)
+        :type "role"
+        :allow "{permission_allow}"
+        :deny "{permission_deny}"))
+
+    (for-each ((i permission) (enumerate permissions))
+      (discord-channel-permission
+        "{permission_slug}"
+        :when "{permission_on_forum}"
+        :channel-id (ref discord-forum-channel "{permission_channel_slug}" id)
+        :overwrite-id (ref discord-role "{permission_role_slug}" id)
+        :type "role"
+        :allow "{permission_allow}"
+        :deny "{permission_deny}"))
+
+    (for-each ((i permission) (enumerate permissions))
+      (discord-channel-permission
+        "{permission_slug}"
+        :when "{permission_on_category}"
+        :channel-id (ref discord-category-channel "{permission_channel_slug}" id)
+        :overwrite-id (ref discord-role "{permission_role_slug}" id)
+        :type "role"
+        :allow "{permission_allow}"
+        :deny "{permission_deny}"))))

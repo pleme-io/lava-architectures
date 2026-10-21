@@ -30,6 +30,10 @@
     clippy::unreadable_literal
 )]
 
+#[allow(dead_code)]
+#[path = "common/discord_server_fixture.rs"]
+mod discord_server_fixture;
+
 use indexmap::IndexMap;
 use lava_architectures::{
     ARCHITECTURE_DIR, BUNDLED_ARCHITECTURES, eval_architecture, interface_for,
@@ -413,6 +417,18 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
                 );
                 bag.insert(k.to_string(), vs.join(","));
                 b.set_list(k, vs);
+            }
+        }
+        "discord-server" => {
+            let (k, v) = ("server-id", "111122223333444455");
+            b.set_str(k, v);
+            bag.insert(k.to_string(), v.to_string());
+            b.set_records("roles", discord_server_fixture::roles());
+            b.set_records("categories", discord_server_fixture::categories());
+            b.set_records("channels", discord_server_fixture::channels());
+            b.set_records("permissions", discord_server_fixture::permissions());
+            for k in ["roles", "categories", "channels", "permissions"] {
+                bag.insert(k.to_string(), "acme".to_string());
             }
         }
         "discord-server-baseline" => {
