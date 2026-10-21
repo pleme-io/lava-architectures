@@ -145,9 +145,9 @@ rec {
       };
       "indexmap" = rec {
         crateName = "indexmap";
-        version = "2.14.1";
+        version = "2.14.2";
         edition = "2024";
-        sha256 = "1sq9z90viwfw8053l32rrby563hy67xl8n6k65d92hi22i421ah7";
+        sha256 = "0mf86hbjkkcd82cpq683bblbs0zwa8ndla96ci8p1ji6bl7ijknc";
         dependencies = [
           {
             name = "equivalent";
@@ -241,7 +241,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.2.9";
+        version = "0.2.10";
         edition = "2024";
         crateBin = [
           {
@@ -419,9 +419,9 @@ rec {
       };
       "lava-schema" = rec {
         crateName = "lava-schema";
-        version = "0.1.7";
+        version = "0.1.8";
         edition = "2024";
-        sha256 = "15nzi1liva2cg5ds8nix0zhypsf94vihgvajm3r5i6snhv0ncfnq";
+        sha256 = "0hyw01m40xa7x37bi3n4dk0hyhaywcqwvdnvigsqqq7gcpvlzach";
         libName = "lava_schema";
         authors = [
           "pleme-io"
@@ -906,9 +906,9 @@ rec {
       };
       "syn" = rec {
         crateName = "syn";
-        version = "3.0.4";
+        version = "3.0.5";
         edition = "2021";
-        sha256 = "17v4ac61x0hvj1879ywqzlwhyzg7n9lr9zniwrsif3b1ykfmq9z6";
+        sha256 = "1yc9vbm1wqs68fyj5f1f3f9isyh6i7wpxccvfrgpfnzn200jxpqj";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
