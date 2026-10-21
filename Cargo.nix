@@ -120,10 +120,22 @@ rec {
       };
       "equivalent" = rec {
         crateName = "equivalent";
-        version = "1.0.2";
+        version = "1.0.3";
         edition = "2015";
-        sha256 = "03swzqznragy8n0x31lqc78g2af054jwivp7lkrbrc0khz74lyl7";
+        sha256 = "09nqddaa84mix3vil6r02jlmya3qypi4j45dhzb8yphf83ap9l80";
 
+      };
+      "foldhash" = rec {
+        crateName = "foldhash";
+        version = "0.2.0";
+        edition = "2021";
+        sha256 = "1nvgylb099s11xpfm1kn2wcsql080nqmnhj1l25bp3r2b35j9kkp";
+        authors = [
+          "Orson Peters <orsonpeters@gmail.com>"
+        ];
+        features = {
+          "default" = [ "std" ];
+        };
       };
       "hashbrown" = rec {
         crateName = "hashbrown";
@@ -206,9 +218,9 @@ rec {
       };
       "lava-arch" = rec {
         crateName = "lava-arch";
-        version = "0.2.2";
+        version = "0.2.5";
         edition = "2024";
-        sha256 = "10l28i9bfmxxzp9xgsyj6j8hgi8hnp69q87iqmq0fg8nd79bbx1h";
+        sha256 = "0ai50jr2bi0ryhv8al9mkcsf8dnbgxwl26p66j3smv96fjgy9k9n";
         libName = "lava_arch";
         authors = [
           "pleme-io"
@@ -241,7 +253,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.2.10";
+        version = "0.2.11";
         edition = "2024";
         crateBin = [
           {
@@ -336,9 +348,9 @@ rec {
       };
       "lava-core" = rec {
         crateName = "lava-core";
-        version = "0.2.3";
+        version = "0.2.4";
         edition = "2024";
-        sha256 = "0znm295px2m2s9x8a6sq60smblxyn21f0g611cm7zaikxcgnch3k";
+        sha256 = "1x13nldcgyyk4gl5x0jidblx8cqqrb016g8xgfip51alsfjf9n1f";
         libName = "lava_core";
         authors = [
           "pleme-io"
@@ -372,9 +384,9 @@ rec {
       };
       "lava-eval" = rec {
         crateName = "lava-eval";
-        version = "0.2.3";
+        version = "0.2.7";
         edition = "2024";
-        sha256 = "10bds65ypdkwc260x4brxb4y3lywd410dkj208kx1c893f22jpr5";
+        sha256 = "048prcnimf1civklxggfqx97fhcmcp065nl6021lm6kb9kk19rvs";
         libName = "lava_eval";
         authors = [
           "pleme-io"
@@ -780,7 +792,7 @@ rec {
         features = {
           "default" = [ "std" "result" ];
         };
-        resolvedDefaultFeatures = [ "result" "std" ];
+        resolvedDefaultFeatures = [ "alloc" "result" "std" ];
       };
       "serde_derive" = rec {
         crateName = "serde_derive";
@@ -818,18 +830,21 @@ rec {
       };
       "serde_json" = rec {
         crateName = "serde_json";
-        version = "1.0.151";
+        version = "1.0.154";
         edition = "2021";
-        sha256 = "051zww7lvpw147vvwss1ng6w587qyrkzg75fvj08q2dfrmgbahf8";
-        authors = [
-          "Erick Tryzelaar <erick.tryzelaar@gmail.com>"
-          "David Tolnay <dtolnay@gmail.com>"
-        ];
+        sha256 = "1mjby21g8fxhrsfp73yz8wg6n2f4h23ah0nczds409l53f5wrsg7";
         dependencies = [
+          {
+            name = "foldhash";
+            packageId = "foldhash";
+            optional = true;
+            usesDefaultFeatures = false;
+          }
           {
             name = "indexmap";
             packageId = "indexmap";
             optional = true;
+            usesDefaultFeatures = false;
           }
           {
             name = "itoa";
@@ -867,10 +882,10 @@ rec {
           "alloc" = [ "serde_core/alloc" ];
           "default" = [ "std" ];
           "indexmap" = [ "dep:indexmap" ];
-          "preserve_order" = [ "indexmap" "std" ];
+          "preserve_order" = [ "indexmap" "alloc" "dep:foldhash" ];
           "std" = [ "memchr/std" "serde_core/std" ];
         };
-        resolvedDefaultFeatures = [ "default" "indexmap" "preserve_order" "std" ];
+        resolvedDefaultFeatures = [ "alloc" "default" "indexmap" "preserve_order" "std" ];
       };
       "serde_yaml" = rec {
         crateName = "serde_yaml";
@@ -906,9 +921,9 @@ rec {
       };
       "syn" = rec {
         crateName = "syn";
-        version = "3.0.5";
+        version = "3.0.9";
         edition = "2021";
-        sha256 = "1yc9vbm1wqs68fyj5f1f3f9isyh6i7wpxccvfrgpfnzn200jxpqj";
+        sha256 = "0fw28lhl90kls24q2h2sp39yjb0lsvz5cwh9fd3f3w3v9kp8v36p";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -939,9 +954,9 @@ rec {
       };
       "thiserror" = rec {
         crateName = "thiserror";
-        version = "2.0.20";
+        version = "2.0.21";
         edition = "2021";
-        sha256 = "0kxs6p295jffxhzaxpxv1dwaaf5iqlm6sx8h0djp6ancbxgj71pc";
+        sha256 = "17hq1lh5dyr3bkc7zzjrbrp4qgkvhc48kgq1n5fdxkindaw2rr89";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -958,9 +973,9 @@ rec {
       };
       "thiserror-impl" = rec {
         crateName = "thiserror-impl";
-        version = "2.0.20";
+        version = "2.0.21";
         edition = "2021";
-        sha256 = "1bwjc94gi0xn5jz26h1a8bjj1wdkvvr6jifamyc4mp9n28zcs15w";
+        sha256 = "0945n8agp7kg6n6b35yyjb4g5xv2q22vrw15h6jj1nw76a99flgy";
         procMacro = true;
         libName = "thiserror_impl";
         authors = [
@@ -984,9 +999,9 @@ rec {
       };
       "unicode-ident" = rec {
         crateName = "unicode-ident";
-        version = "1.0.24";
+        version = "1.0.27";
         edition = "2021";
-        sha256 = "0xfs8y1g7syl2iykji8zk5hgfi5jw819f5zsrbaxmlzwsly33r76";
+        sha256 = "0qv54hz0sxmspjyr162z3435pnyylzjjhx3j4k1s359pqgb59ix2";
         libName = "unicode_ident";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
