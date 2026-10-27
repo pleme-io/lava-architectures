@@ -35,7 +35,8 @@
       :fields (:color :string))
     (:moves :type (:list-of :string) :default ())
     (:repo-count :type :string :default "0"))
-  :outputs ((:repo-count :type :string)))
+  :outputs ((:repo-count :type :string))
+  :leaf (:key :slug :each (:repos :moves)))
 
 (deflava-architecture github-org-repos
   :inputs ((:owner "pleme-io")

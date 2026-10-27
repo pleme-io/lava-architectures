@@ -17,6 +17,10 @@ path = "src/lib.rs"
 # clean checkout. No clap: see the header of src/bin/render.rs for why the
 # arg parse is hand-rolled.
 [[bin]]
+name = "lava-leaves"
+path = "src/bin/leaves.rs"
+
+[[bin]]
 name = "lava-render"
 path = "src/bin/render.rs"
 
@@ -31,9 +35,11 @@ thiserror = "2"
 lava-core = "0.2"
 lava-arch = "0.2"
 lava-contracts = "0.2"
-lava-eval = "0.2.8"
+lava-eval = "0.2.10"
 lava-schema = "0.1"
 lava-types = "0.1"
+blake3 = "1"
+serde_norway = "0.9"
 
 [dev-dependencies]
 lava-test = "0.2"
