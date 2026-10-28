@@ -59,7 +59,8 @@ fn declaration(enabled: bool) -> Value {
         "count": "repo_count",
         "namespace": "default",
         "spec": {"pangeaNamespace": "pleme-io-github", "destroyProtection": true},
-        "catalog": {"source": {}}
+        "catalog": {"source": {}},
+        "migrate_from": "org-repos-fat"
     })
 }
 
@@ -191,6 +192,19 @@ fn a_rendered_tree_is_fresh_and_a_hand_edit_is_stale() {
         "{body}"
     );
     assert!(body.contains("pangea.pleme.io/leaf-key: alpha"), "{body}");
+    assert!(
+        body.contains("pangea.pleme.io/leaf-collection: repos"),
+        "{body}"
+    );
+    assert!(
+        body.contains("pangea.pleme.io/leaf-key-field: slug"),
+        "{body}"
+    );
+    let catalog = std::fs::read_to_string(ws.join("leaves/org-repos/catalog.yaml")).unwrap();
+    assert!(
+        catalog.contains("pangea.pleme.io/migrate-from: org-repos-fat"),
+        "{catalog}"
+    );
     std::fs::write(&leaf, body.replace("alpha repo", "edited")).unwrap();
     std::fs::write(ws.join("leaves/org-repos/leaves/extra.yaml"), "x").unwrap();
     assert_eq!(tree_drift(&ws, &out.files, &out.sets).len(), 2);

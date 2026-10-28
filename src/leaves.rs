@@ -11,6 +11,9 @@ pub const MAX_NAME_LEN: usize = 63;
 pub const WORKSPACE_LABEL: &str = "pangea.pleme.io/workspace";
 pub const LEAF_KEY: &str = "pangea.pleme.io/leaf-key";
 pub const LEAF_DIGEST: &str = "pangea.pleme.io/leaf-digest";
+pub const LEAF_COLLECTION: &str = "pangea.pleme.io/leaf-collection";
+pub const LEAF_KEY_FIELD: &str = "pangea.pleme.io/leaf-key-field";
+pub const MIGRATE_FROM: &str = "pangea.pleme.io/migrate-from";
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -39,6 +42,8 @@ pub struct Declaration {
     pub spec: Map<String, Value>,
     #[serde(default)]
     pub catalog: Map<String, Value>,
+    #[serde(default)]
+    pub migrate_from: Option<String>,
 }
 
 fn on() -> bool {
@@ -346,10 +351,14 @@ pub fn manifests(
     let mut out = BTreeMap::new();
     let mut catalog_spec = d.catalog.clone();
     catalog_spec.insert("variables".into(), Value::Object(set.shared.clone()));
+    let mut catalog_meta = serde_json::json!({"name": d.leaves, "namespace": d.namespace});
+    if let Some(fat) = &d.migrate_from {
+        catalog_meta["annotations"] = serde_json::json!({MIGRATE_FROM: fat});
+    }
     let catalog = serde_json::json!({
         "apiVersion": "pangea.pleme.io/v1alpha1",
         "kind": "WorkspaceCatalog",
-        "metadata": {"name": d.leaves, "namespace": d.namespace},
+        "metadata": catalog_meta,
         "spec": catalog_spec,
     });
     out.insert(dir.join("catalog.yaml"), yaml(&catalog)?);
@@ -367,6 +376,8 @@ pub fn manifests(
                 "labels": {WORKSPACE_LABEL: d.leaves},
                 "annotations": {
                     LEAF_KEY: leaf.key,
+                    LEAF_COLLECTION: set.rule.primary(),
+                    LEAF_KEY_FIELD: set.rule.key,
                     LEAF_DIGEST: digest(architecture_source, &leaf_inputs(set, leaf)),
                 },
             },
