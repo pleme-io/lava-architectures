@@ -200,6 +200,10 @@ fn a_rendered_tree_is_fresh_and_a_hand_edit_is_stale() {
         body.contains("pangea.pleme.io/leaf-key-field: slug"),
         "{body}"
     );
+    assert!(
+        body.contains("pangea.pleme.io/leaf-addresses: github_actions_repository_permissions.alpha_actions,github_branch_protection.alpha_protection,github_issue_label.alpha-label-bug,github_repository.alpha"),
+        "{body}"
+    );
     let catalog = std::fs::read_to_string(ws.join("leaves/org-repos/catalog.yaml")).unwrap();
     assert!(
         catalog.contains("pangea.pleme.io/migrate-from: org-repos-fat"),

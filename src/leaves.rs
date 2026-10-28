@@ -14,6 +14,7 @@ pub const LEAF_DIGEST: &str = "pangea.pleme.io/leaf-digest";
 pub const LEAF_COLLECTION: &str = "pangea.pleme.io/leaf-collection";
 pub const LEAF_KEY_FIELD: &str = "pangea.pleme.io/leaf-key-field";
 pub const MIGRATE_FROM: &str = "pangea.pleme.io/migrate-from";
+pub const LEAF_ADDRESSES: &str = "pangea.pleme.io/leaf-addresses";
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -342,6 +343,20 @@ fn yaml(v: &Value) -> Result<String, String> {
     serde_norway::to_string(&canonical(v)).map_err(|e| e.to_string())
 }
 
+#[must_use]
+pub fn addresses(rendered: &Value) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Some(Value::Object(types)) = rendered.get("resource") {
+        for (ty, names) in types {
+            if let Value::Object(names) = names {
+                out.extend(names.keys().map(|n| format!("{ty}.{n}")));
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
 pub fn manifests(
     set: &LeafSet,
     architecture_source: &str,
@@ -363,6 +378,7 @@ pub fn manifests(
     });
     out.insert(dir.join("catalog.yaml"), yaml(&catalog)?);
     for leaf in &set.leaves {
+        let owned = addresses(&render(architecture_source, &leaf_inputs(set, leaf))?).join(",");
         let mut spec = d.spec.clone();
         spec.insert("templateName".into(), Value::String(d.architecture.clone()));
         spec.insert("dialect".into(), Value::String("lava".into()));
@@ -378,6 +394,7 @@ pub fn manifests(
                     LEAF_KEY: leaf.key,
                     LEAF_COLLECTION: set.rule.primary(),
                     LEAF_KEY_FIELD: set.rule.key,
+                    LEAF_ADDRESSES: owned,
                     LEAF_DIGEST: digest(architecture_source, &leaf_inputs(set, leaf)),
                 },
             },
