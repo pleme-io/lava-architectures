@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "159e1606c5182d3561ddc8a221eb112fc9b91d87d5c7e8727fcf365f0478a863",
+  "cargo_lock_sha256": "f712e2b9350c68ea22627f3e8c42db5d81c8c918c05f8998c84ec92ba90e69e8",
   "manifest_sha256": {
-    "Cargo.toml": "74d8ce3702a9588edb8d81e91bc4e9d6b8bafb5643aff0e7363defcb95e2c683"
+    "Cargo.toml": "1770199361747371edbefbe4bac91fb5f5a31160b2768ddd618acc4597f6d1aa"
   },
   "target_resolves": {
     "base": {
@@ -149,7 +149,7 @@
           },
           {
             "name": "lava_core",
-            "package_key": "lava-core-0.2.4",
+            "package_key": "lava-core-0.2.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -193,7 +193,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "lava-architectures-0.2.16": {
+      "lava-architectures-0.2.17": {
         "runtime_dependencies": [
           {
             "name": "blake3",
@@ -239,7 +239,7 @@
           },
           {
             "name": "lava_core",
-            "package_key": "lava-core-0.2.4",
+            "package_key": "lava-core-0.2.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -339,7 +339,7 @@
           },
           {
             "name": "lava_core",
-            "package_key": "lava-core-0.2.4",
+            "package_key": "lava-core-0.2.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -363,7 +363,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "lava-core-0.2.4": {
+      "lava-core-0.2.5": {
         "runtime_dependencies": [
           {
             "name": "indexmap",
@@ -402,8 +402,8 @@
             "tree": "target"
           },
           {
-            "name": "serde_yaml",
-            "package_key": "serde_yaml-0.9.34+deprecated",
+            "name": "serde_norway",
+            "package_key": "serde_norway-0.9.42",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -451,7 +451,7 @@
           },
           {
             "name": "lava_core",
-            "package_key": "lava-core-0.2.4",
+            "package_key": "lava-core-0.2.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -581,7 +581,7 @@
           },
           {
             "name": "lava_core",
-            "package_key": "lava-core-0.2.4",
+            "package_key": "lava-core-0.2.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1086,62 +1086,6 @@
         "build_dependencies": [],
         "features": []
       },
-      "serde_yaml-0.9.34+deprecated": {
-        "runtime_dependencies": [
-          {
-            "name": "indexmap",
-            "package_key": "indexmap-2.14.2",
-            "kind": "normal",
-            "features": [],
-            "uses_default_features": true,
-            "optional": false,
-            "target": null,
-            "tree": "target"
-          },
-          {
-            "name": "itoa",
-            "package_key": "itoa-1.0.18",
-            "kind": "normal",
-            "features": [],
-            "uses_default_features": true,
-            "optional": false,
-            "target": null,
-            "tree": "target"
-          },
-          {
-            "name": "ryu",
-            "package_key": "ryu-1.0.23",
-            "kind": "normal",
-            "features": [],
-            "uses_default_features": true,
-            "optional": false,
-            "target": null,
-            "tree": "target"
-          },
-          {
-            "name": "serde",
-            "package_key": "serde-1.0.229",
-            "kind": "normal",
-            "features": [],
-            "uses_default_features": true,
-            "optional": false,
-            "target": null,
-            "tree": "target"
-          },
-          {
-            "name": "unsafe_libyaml",
-            "package_key": "unsafe-libyaml-0.2.11",
-            "kind": "normal",
-            "features": [],
-            "uses_default_features": true,
-            "optional": false,
-            "target": null,
-            "tree": "target"
-          }
-        ],
-        "build_dependencies": [],
-        "features": []
-      },
       "shlex-2.0.1": {
         "runtime_dependencies": [],
         "build_dependencies": [],
@@ -1249,11 +1193,6 @@
         "features": []
       },
       "unicode-ident-1.0.27": {
-        "runtime_dependencies": [],
-        "build_dependencies": [],
-        "features": []
-      },
-      "unsafe-libyaml-0.2.11": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": []
@@ -1685,7 +1624,7 @@
     "lava-arch-0.2.5": {
       "edition": "2024"
     },
-    "lava-architectures-0.2.16": {
+    "lava-architectures-0.2.17": {
       "edition": "2024",
       "lib_target": {
         "name": "lava_architectures",
@@ -1705,7 +1644,7 @@
     "lava-contracts-0.2.1": {
       "edition": "2024"
     },
-    "lava-core-0.2.4": {
+    "lava-core-0.2.5": {
       "edition": "2024"
     },
     "lava-eval-0.2.10": {
@@ -1762,9 +1701,6 @@
     "serde_norway-0.9.42": {
       "edition": "2021"
     },
-    "serde_yaml-0.9.34+deprecated": {
-      "edition": "2021"
-    },
     "shlex-2.0.1": {
       "edition": "2018"
     },
@@ -1781,19 +1717,6 @@
     },
     "unicode-ident-1.0.27": {
       "edition": "2021"
-    },
-    "unsafe-libyaml-0.2.11": {
-      "edition": "2021",
-      "binaries": [
-        {
-          "name": "run-emitter-test-suite",
-          "path": "src/bin/run-emitter-test-suite.rs"
-        },
-        {
-          "name": "run-parser-test-suite",
-          "path": "src/bin/run-parser-test-suite.rs"
-        }
-      ]
     },
     "unsafe-libyaml-norway-0.2.15": {
       "edition": "2021",
