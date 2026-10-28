@@ -205,6 +205,7 @@ fn a_rendered_tree_is_fresh_and_a_hand_edit_is_stale() {
         "{body}"
     );
     let catalog = std::fs::read_to_string(ws.join("leaves/org-repos/catalog.yaml")).unwrap();
+    assert!(!catalog.contains("namespace:"), "{catalog}");
     assert!(
         catalog.contains("pangea.pleme.io/migrate-from: org-repos-fat"),
         "{catalog}"

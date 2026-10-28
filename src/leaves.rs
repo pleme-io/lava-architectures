@@ -366,7 +366,7 @@ pub fn manifests(
     let mut out = BTreeMap::new();
     let mut catalog_spec = d.catalog.clone();
     catalog_spec.insert("variables".into(), Value::Object(set.shared.clone()));
-    let mut catalog_meta = serde_json::json!({"name": d.leaves, "namespace": d.namespace});
+    let mut catalog_meta = serde_json::json!({"name": d.leaves});
     if let Some(fat) = &d.migrate_from {
         catalog_meta["annotations"] = serde_json::json!({MIGRATE_FROM: fat});
     }
