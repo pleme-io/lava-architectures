@@ -1,0 +1,56 @@
+(deflava-interface roles-anywhere-role
+  :doc "IAM Roles Anywhere access root: trust anchor, role, policy, profile"
+  :inputs ((:name :type :string :required #t)
+    (:role_name :type :string :required #t)
+    (:ca_cert_pem :type :string :required #t)
+    (:trust_policy_json :type :string :required #t)
+    (:policy_json :type :string :required #t))
+  :outputs ((:trust-anchor-arn :type :string :required #t)
+    (:profile-arn :type :string :required #t)
+    (:role-arn :type :string :required #t)))
+
+(deflava-architecture roles-anywhere-role
+  :inputs ((:name "access")
+    (:role_name "access")
+    (:ca_cert_pem "")
+    (:trust_policy_json "")
+    (:policy_json ""))
+
+  :resources ((aws-rolesanywhere-trust-anchor
+      "{name}-anchor"
+      :name "{name}-anchor"
+      :enabled #t
+      :source (:source_type "CERTIFICATE_BUNDLE"
+               :source_data (:x509_certificate_data "{ca_cert_pem}"))
+      :tags ((Name "{name}-anchor")))
+
+    (aws-iam-role
+      "{name}-role"
+      :name "{role_name}"
+      :max_session_duration 3600
+      :assume_role_policy "{trust_policy_json}"
+      :tags ((Name "{role_name}")))
+
+    (aws-iam-policy
+      "{name}-policy"
+      :name "{role_name}-policy"
+      :policy "{policy_json}"
+      :tags ((Name "{role_name}-policy")))
+
+    (aws-iam-role-policy-attachment
+      "{name}-policy-attachment"
+      :role (ref aws-iam-role "{name}-role" name)
+      :policy_arn (ref aws-iam-policy "{name}-policy" arn))
+
+    (aws-rolesanywhere-profile
+      "{name}-profile"
+      :name "{name}-profile"
+      :enabled #t
+      :duration_seconds 3600
+      :role_arns ((ref aws-iam-role "{name}-role" arn))
+      :tags ((Name "{name}-profile"))))
+
+  :result (roles-anywhere-role
+    :trust-anchor-arn (ref aws-rolesanywhere-trust-anchor "{name}-anchor" arn)
+    :profile-arn (ref aws-rolesanywhere-profile "{name}-profile" arn)
+    :role-arn (ref aws-iam-role "{name}-role" arn)))

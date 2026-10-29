@@ -1,0 +1,8 @@
+(deflava-test roles-anywhere-role/default
+  :architecture roles-anywhere-role
+  :assertions ((resource-exists aws-rolesanywhere-trust-anchor "access-anchor")
+               (resource-exists aws-iam-role "access-role")
+               (resource-exists aws-iam-policy "access-policy")
+               (resource-exists aws-iam-role-policy-attachment "access-policy-attachment")
+               (resource-exists aws-rolesanywhere-profile "access-profile")
+               (ref-valid)))

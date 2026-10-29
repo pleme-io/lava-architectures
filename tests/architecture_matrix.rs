@@ -189,6 +189,18 @@ fn minimal_bindings(arch_name: &str) -> (InputBindings, IndexMap<String, String>
                 bag.insert(k.to_string(), v.to_string());
             }
         }
+        "roles-anywhere-role" => {
+            for (k, v) in [
+                ("name", "matrix"),
+                ("role_name", "matrix"),
+                ("ca_cert_pem", "-----BEGIN CERTIFICATE-----\nMATRIX\n-----END CERTIFICATE-----\n"),
+                ("trust_policy_json", r#"{"Version":"2012-10-17","Statement":[]}"#),
+                ("policy_json", r#"{"Version":"2012-10-17","Statement":[]}"#),
+            ] {
+                b.set_str(k, v);
+                bag.insert(k.to_string(), v.to_string());
+            }
+        }
         "akeyless-secrets" => {
             b.set_str("name-prefix", "matrix-test");
             bag.insert("name-prefix".to_string(), "matrix-test".to_string());

@@ -99,6 +99,7 @@ pub const BUNDLED_ARCHITECTURES: &[(&str, usize)] = &[
     ("dns-record-set-typed", 4),         // apex + www + mx + verify
     ("backup-recovery-multi-region", 3), // primary + secondary + plan
     ("cilium-irsa-variants", 3),         // 3 IRSA roles
+    ("roles-anywhere-role", 5),          // anchor + role + policy + attachment + profile
 ];
 
 /// Derived view of the typed interface registered alongside each
