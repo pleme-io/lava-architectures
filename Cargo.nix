@@ -406,7 +406,7 @@ rec {
       };
       "lava-architectures" = rec {
         crateName = "lava-architectures";
-        version = "0.2.17";
+        version = "0.2.18";
         edition = "2024";
         crateBin = [
           {
@@ -514,9 +514,9 @@ rec {
       };
       "lava-core" = rec {
         crateName = "lava-core";
-        version = "0.2.4";
+        version = "0.2.5";
         edition = "2024";
-        sha256 = "1x13nldcgyyk4gl5x0jidblx8cqqrb016g8xgfip51alsfjf9n1f";
+        sha256 = "0lk789jyl8d44baljq5ml5hp4yvwb57mbgfbp83i3jyljj096rlx";
         libName = "lava_core";
         authors = [
           "pleme-io"
@@ -538,8 +538,8 @@ rec {
             features = [ "preserve_order" ];
           }
           {
-            name = "serde_yaml";
-            packageId = "serde_yaml";
+            name = "serde_norway";
+            packageId = "serde_norway";
           }
           {
             name = "thiserror";
@@ -1098,38 +1098,6 @@ rec {
         ];
 
       };
-      "serde_yaml" = rec {
-        crateName = "serde_yaml";
-        version = "0.9.34+deprecated";
-        edition = "2021";
-        sha256 = "0isba1fjyg3l6rxk156k600ilzr8fp7crv82rhal0rxz5qd1m2va";
-        authors = [
-          "David Tolnay <dtolnay@gmail.com>"
-        ];
-        dependencies = [
-          {
-            name = "indexmap";
-            packageId = "indexmap";
-          }
-          {
-            name = "itoa";
-            packageId = "itoa";
-          }
-          {
-            name = "ryu";
-            packageId = "ryu";
-          }
-          {
-            name = "serde";
-            packageId = "serde";
-          }
-          {
-            name = "unsafe-libyaml";
-            packageId = "unsafe-libyaml";
-          }
-        ];
-
-      };
       "shlex" = rec {
         crateName = "shlex";
         version = "2.0.1";
@@ -1232,18 +1200,6 @@ rec {
         edition = "2021";
         sha256 = "0qv54hz0sxmspjyr162z3435pnyylzjjhx3j4k1s359pqgb59ix2";
         libName = "unicode_ident";
-        authors = [
-          "David Tolnay <dtolnay@gmail.com>"
-        ];
-
-      };
-      "unsafe-libyaml" = rec {
-        crateName = "unsafe-libyaml";
-        version = "0.2.11";
-        edition = "2021";
-        crateBin = [];
-        sha256 = "0qdq69ffl3v5pzx9kzxbghzn0fzn266i1xn70y88maybz9csqfk7";
-        libName = "unsafe_libyaml";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
